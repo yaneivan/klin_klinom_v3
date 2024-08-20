@@ -97,10 +97,11 @@ def projects():
                 filename = os.path.join(app.config['UPLOAD_FOLDER'], mp3.filename)
                 mp3.save(filename)
                 transcription_id = str(uuid.uuid4())  # Generate a unique ID for the transcription
-                send_for_transcription(filename, transcription_id)
-                conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status) VALUES (?, ?, ?, ?, ?)', 
-                             (user_id, name, filename, transcription_id, 'in_queue'))
-                conn.commit()
+                status = send_for_transcription(filename, transcription_id)
+                if status == 'in_queue':
+                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status) VALUES (?, ?, ?, ?, ?)', 
+                                 (user_id, name, filename, transcription_id, 'in_queue'))
+                    conn.commit()
         elif 'delete' in request.form:
             project_id = request.form['delete']
             conn.execute('DELETE FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id))
@@ -138,7 +139,7 @@ def send_for_transcription(mp3_path, transcription_id):
         data = {'id': transcription_id}
         response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
         if response.status_code == 200:
-            return response.json()['id']
+            return response.json()['status']
         else:
             return None
 

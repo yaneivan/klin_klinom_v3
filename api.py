@@ -4,6 +4,7 @@ import torchaudio
 from io import BytesIO
 import os
 import time
+import threading
 
 app = Flask(__name__)
 
@@ -12,20 +13,11 @@ transcription_results = {}
 transcription_statuses = {}
 queue = []
 
-@app.route('/transcribe', methods=['POST'])
-def transcribe():
-    audio = request.files['audio_file']
-    audio_id = request.form.get('id')
-    audio_stream = BytesIO(audio.read())
-
+def process_transcription(audio_id, audio_stream):
     transcriber = Transcriber()
 
-    waveform, sample_rate = torchaudio.load(audio_stream)
+    waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
     numpy_waveform = waveform.mean(dim=0).numpy()
-
-    # Simulate queuing and processing
-    queue.append(audio_id)
-    transcription_statuses[audio_id] = 'in_queue'
 
     # Simulate processing (this should be done asynchronously in a real-world scenario)
     time.sleep(5)  # Simulate processing time
@@ -36,11 +28,25 @@ def transcribe():
         "sampling_rate": sample_rate
     })
 
+    # Update transcription results and statuses
     transcription_results[audio_id] = result
     transcription_statuses[audio_id] = 'completed'
     queue.remove(audio_id)
 
-    return jsonify({'status': 'completed', 'id': audio_id})
+@app.route('/transcribe', methods=['POST'])
+def transcribe():
+    audio = request.files['audio_file']
+    audio_id = request.form.get('id')
+    audio_stream = audio.read()
+
+    # Add to queue and set initial status
+    queue.append(audio_id)
+    transcription_statuses[audio_id] = 'in_queue'
+
+    # Start a new thread to process the transcription
+    threading.Thread(target=process_transcription, args=(audio_id, audio_stream)).start()
+
+    return jsonify({'status': 'in_queue', 'id': audio_id})
 
 @app.route('/transcribe/<id>', methods=['GET'])
 def get_transcription(id):
