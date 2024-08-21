@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Editor - klin_klinom_v2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="header">
+        <div class="title">klin_klinom_v2</div>
+        <div class="account-info">
+            <div class="avatar"></div>
+            <div class="email">{{ session['user_id'] }}</div>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <div class="audio-player">
+            <audio controls id="audioPlayer">
+                <source src="{{ url_for('static', filename='audio/segment1.mp3') }}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+
+        <div class="text-field">
+            <textarea id="transcriptionText" placeholder="Edit transcription here..."></textarea>
+        </div>
+
+        <div class="segment-navigation">
+            <button id="prevSegment">Previous Segment</button>
+            <button id="nextSegment">Next Segment</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSegment = 1;
+        const maxSegments = 10; // Replace with the actual number of segments
+
+        document.getElementById('prevSegment').addEventListener('click', () => {
+            if (currentSegment > 1) {
+                currentSegment--;
+                updateAudioPlayer(currentSegment);
+            }
+        });
+
+        document.getElementById('nextSegment').addEventListener('click', () => {
+            if (currentSegment < maxSegments) {
+                currentSegment++;
+                updateAudioPlayer(currentSegment);
+            }
+        });
+
+        function updateAudioPlayer(segmentNumber) {
+            const audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = `{{ url_for('static', filename='audio/segment') }}${segmentNumber}.mp3`;
+            audioPlayer.load();
+            audioPlayer.play();
+        }
+    </script>
+</body>
+</html>

@@ -6,6 +6,23 @@
     <title>Project Selection - klin_klinom_v2</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .project {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .project-info {
+            flex-grow: 1;
+        }
+        .delete-button {
+            margin-left: 10px;
+        }
+    </style>
     <script>
         function updateStatus(projectId) {
             fetch(`/project/${projectId}/status`)
@@ -26,7 +43,19 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', startStatusUpdates);
+        function handleProjectClick(event) {
+            const projectDiv = event.currentTarget;
+            const projectId = projectDiv.getAttribute('data-id');
+            window.location.href = `/editor/${projectId}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            startStatusUpdates();
+            const projects = document.querySelectorAll('.project');
+            projects.forEach(project => {
+                project.addEventListener('click', handleProjectClick);
+            });
+        });
     </script>
 </head>
 <body>
@@ -41,11 +70,13 @@
     <div class="project-list">
         {% for project in projects %}
         <div class="project" data-id="{{ project['id'] }}">
-            <a href="{{ url_for('view_project', project_id=project['id']) }}">{{ project['name'] }}</a>
-            <div class="status">{{ project['transcription_status'] }}</div>
-            <form method="POST" action="{{ url_for('projects') }}">
+            <div class="project-info">
+                <div class="project-name">{{ project['name'] }}</div>
+                <div class="status">{{ project['transcription_status'] }}</div>
+            </div>
+            <form method="POST" action="{{ url_for('projects') }}" class="delete-form">
                 <input type="hidden" name="delete" value="{{ project['id'] }}">
-                <button type="submit">Delete</button>
+                <button type="submit" class="delete-button">Delete</button>
             </form>
         </div>
         {% endfor %}

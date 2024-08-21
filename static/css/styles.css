@@ -270,3 +270,50 @@ body {
 .create-project input[type="submit"]:hover {
     background-color: #357ABD;
 }
+
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px;
+}
+
+.audio-player {
+    margin-bottom: 20px;
+}
+
+.text-field {
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 20px;
+}
+
+.text-field textarea {
+    width: 100%;
+    height: 200px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.segment-navigation {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 600px;
+}
+
+.segment-navigation button {
+    padding: 10px 20px;
+    background-color: #4a90e2;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.segment-navigation button:hover {
+    background-color: #357ABD;
+}

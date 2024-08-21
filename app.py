@@ -171,6 +171,7 @@ def view_project(project_id):
 
     return render_template('view_project.html', project=project)
 
+# Route for serving project status
 @app.route('/project/<int:project_id>/status', methods=['GET'])
 def get_project_status(project_id):
     if 'user_id' not in session:
@@ -185,6 +186,24 @@ def get_project_status(project_id):
         return jsonify({'error': 'Project not found'}), 404
 
     return jsonify({'status': project['transcription_status']})
+
+# Route for the audio editing page
+@app.route('/editor/<int:project_id>')
+def editor(project_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = get_db_connection()
+    project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
+    if project is None:
+        conn.close()
+        abort(404)  # Return a 404 error if the project does not exist or does not belong to the user
+
+    update_transcription_status(project, conn)
+    conn.close()
+
+    return render_template('editor.html', project=project)
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
