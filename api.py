@@ -19,8 +19,6 @@ def process_transcription(audio_id, audio_stream):
     waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
     numpy_waveform = waveform.mean(dim=0).numpy()
 
-    # Simulate processing (this should be done asynchronously in a real-world scenario)
-    time.sleep(5)  # Simulate processing time
     result = transcriber.transcribe_with_speaker_detection({
         "waveform": waveform,
         "sample_rate": sample_rate,
