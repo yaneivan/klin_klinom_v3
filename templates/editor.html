@@ -3,61 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Editor - klin_klinom_v2</title>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <title>Editor - klin_klinom_v2</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <div class="header">
-        <div class="title">klin_klinom_v2</div>
-        <div class="account-info">
-            <div class="avatar"></div>
-            <div class="email">{{ session['user_id'] }}</div>
-        </div>
-    </div>
-
     <div class="editor-container">
         <div class="audio-player">
-            <audio controls id="audioPlayer">
-                <source src="{{ url_for('static', filename='audio/segment1.mp3') }}" type="audio/mpeg">
+            <audio controls id="audio-player">
+                <source id="audio-source" type="audio/mp3">
                 Your browser does not support the audio element.
             </audio>
         </div>
-
         <div class="text-field">
-            <textarea id="transcriptionText" placeholder="Edit transcription here..."></textarea>
+            <textarea id="text-box" rows="10" cols="50"></textarea>
         </div>
-
         <div class="segment-navigation">
-            <button id="prevSegment">Previous Segment</button>
-            <button id="nextSegment">Next Segment</button>
+            <button id="prev-chunk">Previous</button>
+            <span id="chunk-counter">1</span>
+            <button id="next-chunk">Next</button>
         </div>
     </div>
-
     <script>
-        let currentSegment = 1;
-        const maxSegments = 10; // Replace with the actual number of segments
+        let transcription = [];
+        let currentChunkIndex = 0;
+        const audioPlayer = document.getElementById('audio-player');
+        const audioSource = document.getElementById('audio-source');
+        const textBox = document.getElementById('text-box');
+        const chunkCounter = document.getElementById('chunk-counter');
 
-        document.getElementById('prevSegment').addEventListener('click', () => {
-            if (currentSegment > 1) {
-                currentSegment--;
-                updateAudioPlayer(currentSegment);
+        const project = {{ project | tojson | safe }};
+
+        function loadChunk(index) {
+            if (index >= 0 && index < transcription.length) {
+                const chunk = transcription[index];
+                const start = chunk.timestamp[0];
+                const end = chunk.timestamp[1];
+                audioSource.src = `/uploads/${project.mp3_path}#t=${start},${end}`;
+                audioPlayer.load();
+                textBox.value = chunk.text;
+                chunkCounter.textContent = index + 1;
+                currentChunkIndex = index;
             }
-        });
-
-        document.getElementById('nextSegment').addEventListener('click', () => {
-            if (currentSegment < maxSegments) {
-                currentSegment++;
-                updateAudioPlayer(currentSegment);
-            }
-        });
-
-        function updateAudioPlayer(segmentNumber) {
-            const audioPlayer = document.getElementById('audioPlayer');
-            audioPlayer.src = `{{ url_for('static', filename='audio/segment') }}${segmentNumber}.mp3`;
-            audioPlayer.load();
-            audioPlayer.play();
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const projectId = project.id;
+            fetch(`/project/${projectId}/transcription`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        transcription = data;
+                        loadChunk(0);
+                    }
+                });
+        });
+
+        document.getElementById('prev-chunk').addEventListener('click', () => {
+            loadChunk(currentChunkIndex - 1);
+        });
+
+        document.getElementById('next-chunk').addEventListener('click', () => {
+            loadChunk(currentChunkIndex + 1);
+        });
     </script>
 </body>
 </html>

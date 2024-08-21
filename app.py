@@ -203,7 +203,19 @@ def editor(project_id):
     update_transcription_status(project, conn)
     conn.close()
 
-    return render_template('editor.html', project=project)
+    # Convert the Row object to a dictionary
+    project_dict = dict(project)
+
+    return render_template('editor.html', project=project_dict)
+
+@app.route('/project/<int:project_id>/transcription', methods=['GET'])
+def get_transcription(project_id):
+    conn = get_db_connection()
+    project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
+    conn.close()
+    if project and project['transcription_result']:
+        return jsonify(eval(project['transcription_result']))
+    return jsonify({'error': 'Transcription not found'}), 404
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
