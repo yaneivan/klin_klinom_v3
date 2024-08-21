@@ -38,7 +38,9 @@
                 const chunk = transcription[index];
                 const start = chunk.timestamp[0];
                 const end = chunk.timestamp[1];
-                audioSource.src = `/uploads/${project.mp3_path}#t=${start},${end}`;
+                // Remove the 'uploads/' prefix if it exists
+                const mp3Path = project.mp3_path.replace('uploads/', '');
+                audioSource.src = `/${mp3Path}#t=${start},${end}`;
                 audioPlayer.load();
                 textBox.value = chunk.text;
                 chunkCounter.textContent = index + 1;

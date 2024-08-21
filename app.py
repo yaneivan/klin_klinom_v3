@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
+from flask import send_from_directory, send_file
+from flask_rangerequest import RangeRequest
 import sqlite3
 import os
 import requests
@@ -216,6 +218,25 @@ def get_transcription(project_id):
     if project and project['transcription_result']:
         return jsonify(eval(project['transcription_result']))
     return jsonify({'error': 'Transcription not found'}), 404
+
+@app.route('/uploads/<path:filename>')
+def download_file(filename):
+    file_path = os.path.join('uploads', filename)
+    range_header = request.headers.get('Range', None)
+    
+    app.logger.debug(f'Range header: {range_header}')
+    
+    if not range_header:
+        return send_file(file_path)
+
+    try:
+        with open(file_path, 'rb') as f:
+            range_request = RangeRequest(f, range_header)
+            return range_request.make_response()
+    except ValueError as e:
+        app.logger.error(f'Range request error: {str(e)}')
+        return send_file(file_path)
+
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
