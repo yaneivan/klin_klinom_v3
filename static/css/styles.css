@@ -8,8 +8,8 @@ body {
     padding: 0;
 }
 
-/* Login Page Styles */
-.login-container {
+/* Form Container Styles */
+.form-container {
     background-color: #fff;
     padding: 40px;
     border-radius: 10px;
@@ -26,7 +26,7 @@ body {
     transform: translate(-50%, -50%);
 }
 
-.login-container h1 {
+.form-container h1 {
     margin-bottom: 30px;
     color: #333;
     font-weight: 600;
@@ -34,14 +34,14 @@ body {
     text-align: center;
 }
 
-.login-container label {
+.form-container label {
     display: block;
     margin-bottom: 8px;
     color: #333;
 }
 
-.login-container input[type="text"], 
-.login-container input[type="password"] {
+.form-container input[type="text"], 
+.form-container input[type="password"] {
     width: 100%;
     padding: 10px;
     margin-bottom: 20px;
@@ -50,7 +50,7 @@ body {
     font-size: 16px;
 }
 
-.login-container input[type="submit"] {
+.form-container input[type="submit"] {
     width: 100%;
     padding: 12px;
     background-color: #4a90e2;
@@ -61,94 +61,22 @@ body {
     cursor: pointer;
 }
 
-.login-container input[type="submit"]:hover {
+.form-container input[type="submit"]:hover {
     background-color: #357ABD;
 }
 
-.login-container .extra-options {
+.form-container .extra-options {
     text-align: center;
     margin-top: 20px;
 }
 
-.login-container .extra-options a {
+.form-container .extra-options a {
     color: #4a90e2;
     text-decoration: none;
     font-size: 14px;
 }
 
-.login-container .extra-options a:hover {
-    text-decoration: underline;
-}
-
-/* Register Page Styles */
-.register-container {
-    background-color: #fff;
-    padding: 40px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: auto;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.register-container h1 {
-    margin-bottom: 30px;
-    color: #333;
-    font-weight: 600;
-    font-size: 24px;
-    text-align: center;
-}
-
-.register-container label {
-    display: block;
-    margin-bottom: 8px;
-    color: #333;
-}
-
-.register-container input[type="text"], 
-.register-container input[type="password"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-.register-container input[type="submit"] {
-    width: 100%;
-    padding: 12px;
-    background-color: #4a90e2;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.register-container input[type="submit"]:hover {
-    background-color: #357ABD;
-}
-
-.register-container .extra-options {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.register-container .extra-options a {
-    color: #4a90e2;
-    text-decoration: none;
-    font-size: 14px;
-}
-
-.register-container .extra-options a:hover {
+.form-container .extra-options a:hover {
     text-decoration: underline;
 }
 
@@ -316,4 +244,20 @@ body {
 
 .segment-navigation button:hover {
     background-color: #357ABD;
+}
+
+.project {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+.project-info {
+    flex-grow: 1;
+}
+.delete-button {
+    margin-left: 10px;
 }

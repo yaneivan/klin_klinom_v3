@@ -6,23 +6,6 @@
     <title>Project Selection - klin_klinom_v2</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-        .project {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-            cursor: pointer;
-        }
-        .project-info {
-            flex-grow: 1;
-        }
-        .delete-button {
-            margin-left: 10px;
-        }
-    </style>
     <script>
         function updateStatus(projectId) {
             fetch(`/project/${projectId}/status`)
