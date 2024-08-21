@@ -1,0 +1,272 @@
+/* styles.css */
+
+/* Common Styles */
+body {
+    font-family: 'Open Sans', sans-serif;
+    background-color: #f0f4f8;
+    margin: 0;
+    padding: 0;
+}
+
+/* Login Page Styles */
+.login-container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.login-container h1 {
+    margin-bottom: 30px;
+    color: #333;
+    font-weight: 600;
+    font-size: 24px;
+    text-align: center;
+}
+
+.login-container label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.login-container input[type="text"], 
+.login-container input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.login-container input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background-color: #4a90e2;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.login-container input[type="submit"]:hover {
+    background-color: #357ABD;
+}
+
+.login-container .extra-options {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.login-container .extra-options a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.login-container .extra-options a:hover {
+    text-decoration: underline;
+}
+
+/* Register Page Styles */
+.register-container {
+    background-color: #fff;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.register-container h1 {
+    margin-bottom: 30px;
+    color: #333;
+    font-weight: 600;
+    font-size: 24px;
+    text-align: center;
+}
+
+.register-container label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.register-container input[type="text"], 
+.register-container input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.register-container input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background-color: #4a90e2;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.register-container input[type="submit"]:hover {
+    background-color: #357ABD;
+}
+
+.register-container .extra-options {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.register-container .extra-options a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.register-container .extra-options a:hover {
+    text-decoration: underline;
+}
+
+/* Projects Page Styles */
+.header {
+    background-color: #4a90e2;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header .title {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.header .account-info {
+    display: flex;
+    align-items: center;
+}
+
+.header .account-info .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    margin-right: 15px;
+}
+
+.header .account-info .email {
+    font-size: 16px;
+}
+
+.project-list {
+    padding: 30px;
+}
+
+.project {
+    background-color: #ffffff;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-size: 18px;
+    color: #333;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.project:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.project a {
+    text-decoration: none;
+    color: #333;
+}
+
+.project form {
+    display: inline;
+}
+
+.project button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.project button:hover {
+    background-color: #c0392b;
+}
+
+.project .status {
+    font-size: 14px;
+    color: #777;
+}
+
+.create-project {
+    margin-top: 20px;
+}
+
+.create-project form {
+    display: flex;
+    flex-direction: column;
+}
+
+.create-project input[type="text"] {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.create-project input[type="file"] {
+    margin-bottom: 10px;
+}
+
+.create-project input[type="submit"] {
+    padding: 12px;
+    background-color: #4a90e2;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.create-project input[type="submit"]:hover {
+    background-color: #357ABD;
+}
