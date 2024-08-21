@@ -6,6 +6,28 @@
     <title>Project Selection - klin_klinom_v2</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        function updateStatus(projectId) {
+            fetch(`/project/${projectId}/status`)
+                .then(response => response.json())
+                .then(data => {
+                    const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
+                    if (statusElement) {
+                        statusElement.textContent = data.status;
+                    }
+                });
+        }
+
+        function startStatusUpdates() {
+            const projects = document.querySelectorAll('.project');
+            projects.forEach(project => {
+                const projectId = project.getAttribute('data-id');
+                setInterval(() => updateStatus(projectId), 5000); // Update every 5 seconds
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', startStatusUpdates);
+    </script>
 </head>
 <body>
     <div class="header">
@@ -18,7 +40,7 @@
 
     <div class="project-list">
         {% for project in projects %}
-        <div class="project">
+        <div class="project" data-id="{{ project['id'] }}">
             <a href="{{ url_for('view_project', project_id=project['id']) }}">{{ project['name'] }}</a>
             <div class="status">{{ project['transcription_status'] }}</div>
             <form method="POST" action="{{ url_for('projects') }}">

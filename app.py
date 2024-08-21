@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
 import sqlite3
 import os
 import requests
 import time
 from flask_cors import CORS
 import uuid
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -44,6 +45,46 @@ def init_db():
             )
         ''')
     conn.close()
+
+# Function to send audio file for transcription
+def send_for_transcription(mp3_path, transcription_id):
+    with open(mp3_path, 'rb') as f:
+        files = {'audio_file': f}
+        data = {'id': transcription_id}
+        response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
+        if response.status_code == 200:
+            return response.json()['status']
+        else:
+            return None
+
+# Function to update transcription status
+def update_transcription_status(project, conn):
+    transcription_id = project['transcription_id']
+    if transcription_id:
+        status_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/status/{transcription_id}')
+        if status_response.status_code == 200:
+            status = status_response.json()['status']
+            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', (status, project['id']))
+            conn.commit()
+            if status == 'completed':
+                result_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/transcribe/{transcription_id}')
+                if result_response.status_code == 200:
+                    result = result_response.json()
+                    conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
+                    conn.commit()
+
+# Background task to periodically check transcription status
+def check_transcription_status():
+    conn = get_db_connection()
+    projects = conn.execute('SELECT * FROM projects WHERE transcription_status != ?', ('completed',)).fetchall()
+    for project in projects:
+        update_transcription_status(project, conn)
+    conn.close()
+
+# Initialize the background scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(check_transcription_status, 'interval', seconds=30)  # Adjust the interval as needed
+scheduler.start()
 
 # Route for the login page
 @app.route('/login', methods=['GET', 'POST'])
@@ -108,8 +149,6 @@ def projects():
             conn.commit()
 
     projects = conn.execute('SELECT * FROM projects WHERE user_id = ?', (user_id,)).fetchall()
-    for project in projects:
-        update_transcription_status(project, conn)
     conn.close()
 
     return render_template('projects.html', projects=projects)
@@ -132,32 +171,20 @@ def view_project(project_id):
 
     return render_template('view_project.html', project=project)
 
-# Function to send audio file for transcription
-def send_for_transcription(mp3_path, transcription_id):
-    with open(mp3_path, 'rb') as f:
-        files = {'audio_file': f}
-        data = {'id': transcription_id}
-        response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
-        if response.status_code == 200:
-            return response.json()['status']
-        else:
-            return None
+@app.route('/project/<int:project_id>/status', methods=['GET'])
+def get_project_status(project_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
 
-# Function to update transcription status
-def update_transcription_status(project, conn):
-    transcription_id = project['transcription_id']
-    if transcription_id:
-        status_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/status/{transcription_id}')
-        if status_response.status_code == 200:
-            status = status_response.json()['status']
-            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', (status, project['id']))
-            conn.commit()
-            if status == 'completed':
-                result_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/transcribe/{transcription_id}')
-                if result_response.status_code == 200:
-                    result = result_response.json()
-                    conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
-                    conn.commit()
+    user_id = session['user_id']
+    conn = get_db_connection()
+    project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
+    conn.close()
+
+    if project is None:
+        return jsonify({'error': 'Project not found'}), 404
+
+    return jsonify({'status': project['transcription_status']})
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
