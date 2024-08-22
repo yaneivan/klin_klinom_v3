@@ -56,6 +56,8 @@ def send_for_transcription(mp3_path, transcription_id):
         response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
         if response.status_code == 200:
             return response.json()['status']
+        elif response.status_code == 404:
+            return 'failed'
         else:
             return None
 
@@ -74,6 +76,9 @@ def update_transcription_status(project, conn):
                     result = result_response.json()
                     conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
                     conn.commit()
+        elif status_response.status_code == 404:
+            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', ('failed', project['id']))
+            conn.commit()
 
 # Background task to periodically check transcription status
 def check_transcription_status():
