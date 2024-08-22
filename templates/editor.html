@@ -13,6 +13,19 @@
         #reset-chunk {
             margin-right: 10px;
         }
+        .text-field {
+            border: 1px solid #ccc;
+            padding: 10px;
+            min-height: 100px;
+            overflow-y: auto;
+        }
+        .text-stripe {
+            border-bottom: 2px solid;
+            padding-bottom: 2px;
+        }
+        .SPEAKER_00 { border-color: #FF5733; }
+        .SPEAKER_01 { border-color: #33FF57; }
+        /* Add more colors for additional speakers */
     </style>
 </head>
 <body>
@@ -24,9 +37,7 @@
                 Your browser does not support the audio element.
             </audio>
         </div>
-        <div class="text-field">
-            <textarea id="text-box" rows="10" cols="50"></textarea>
-        </div>
+        <div class="text-field" contenteditable="true" id="text-box"></div>
         <div class="segment-navigation">
             <button id="prev-chunk">Previous</button>
             <span id="chunk-counter">1</span>
@@ -52,14 +63,14 @@
                 const mp3Path = project.mp3_path.replace('uploads/', '');
                 audioSource.src = `/${mp3Path}#t=${start},${end}`;
                 audioPlayer.load();
-                textBox.value = chunk.text;
+                textBox.innerHTML = `<span class="text-stripe ${chunk.speaker}">${chunk.text}</span>`;
                 chunkCounter.textContent = index + 1; // Display one-based index
                 currentChunkIndex = index;
             }
         }
 
         function saveCurrentChunk() {
-            const updatedText = textBox.value;
+            const updatedText = textBox.innerText.trim();
             if (updatedText !== transcription[currentChunkIndex].text) {
                 fetch(`/project/${project.id}/update_transcription`, {
                     method: 'POST',
@@ -91,7 +102,7 @@
                         alert(data.error);
                     } else {
                         transcription = data;
-                        loadChunk(currentChunkIndex);
+                        loadChunk(0);
                     }
                 });
         }
@@ -102,13 +113,11 @@
 
         document.getElementById('prev-chunk').addEventListener('click', () => {
             saveCurrentChunk();
-            fetchTranscription();
             loadChunk(currentChunkIndex - 1);
         });
 
         document.getElementById('next-chunk').addEventListener('click', () => {
             saveCurrentChunk();
-            fetchTranscription();
             loadChunk(currentChunkIndex + 1);
         });
 
