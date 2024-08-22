@@ -137,6 +137,10 @@ def projects():
     user_id = session['user_id']
     conn = get_db_connection()
 
+    # Fetch the username
+    user = conn.execute('SELECT username FROM users WHERE id = ?', (user_id,)).fetchone()
+    username = user['username'] if user else 'Unknown'
+
     if request.method == 'POST':
         if 'name' in request.form and 'mp3' in request.files:
             name = request.form['name']
@@ -158,7 +162,7 @@ def projects():
     projects = conn.execute('SELECT * FROM projects WHERE user_id = ?', (user_id,)).fetchall()
     conn.close()
 
-    return render_template('projects.html', projects=projects)
+    return render_template('projects.html', projects=projects, username=username)
 
 # Route for viewing a specific project
 @app.route('/project/<int:project_id>')
