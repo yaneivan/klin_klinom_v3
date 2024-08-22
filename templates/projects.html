@@ -6,6 +6,18 @@
     <title>Project Selection - klin_klinom_v2</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .file-upload {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .file-upload.dragover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+    </style>
     <script>
         function updateStatus(projectId) {
             fetch(`/project/${projectId}/status`)
@@ -32,12 +44,49 @@
             window.location.href = `/editor/${projectId}`;
         }
 
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            const fileInput = event.currentTarget.querySelector('input[type="file"]');
+            fileInput.files = event.dataTransfer.files;
+            // Display the file name
+            const fileName = fileInput.files[0].name;
+            event.currentTarget.querySelector('p').textContent = `File selected: ${fileName}`;
+        }
+
+        function handleFileInputChange(event) {
+            const fileInput = event.currentTarget;
+            const fileName = fileInput.files[0].name;
+            const fileUpload = fileInput.closest('.file-upload');
+            fileUpload.querySelector('p').textContent = `File selected: ${fileName}`;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             startStatusUpdates();
             const projects = document.querySelectorAll('.project');
             projects.forEach(project => {
                 project.addEventListener('click', handleProjectClick);
             });
+
+            const fileUpload = document.querySelector('.file-upload');
+            fileUpload.addEventListener('dragover', handleDragOver);
+            fileUpload.addEventListener('dragleave', handleDragLeave);
+            fileUpload.addEventListener('drop', handleDrop);
+
+            const fileInput = document.querySelector('.file-upload input[type="file"]');
+            fileInput.addEventListener('change', handleFileInputChange);
+
+            // Allow clicking on the file upload area to trigger the file input
+            fileUpload.addEventListener('click', () => fileInput.click());
         });
     </script>
 </head>
@@ -67,7 +116,10 @@
         <div class="create-project">
             <form method="POST" enctype="multipart/form-data">
                 <input type="text" name="name" placeholder="Project Name" required>
-                <input type="file" name="mp3" accept="audio/mp3" required>
+                <div class="file-upload">
+                    <input type="file" name="mp3" accept="audio/mp3" required style="display: none;">
+                    <p>Drag & Drop your MP3 file here or click to select</p>
+                </div>
                 <input type="submit" value="Create Project">
             </form>
         </div>
