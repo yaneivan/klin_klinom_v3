@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor - klin_klinom_v2</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .audio-player {
+            display: flex;
+            align-items: center;
+        }
+        #reset-chunk {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="editor-container">
         <div class="audio-player">
+            <button id="reset-chunk">Play again</button>
             <audio controls id="audio-player">
                 <source id="audio-source" type="audio/mp3">
                 Your browser does not support the audio element.
@@ -43,12 +53,36 @@
                 audioSource.src = `/${mp3Path}#t=${start},${end}`;
                 audioPlayer.load();
                 textBox.value = chunk.text;
-                chunkCounter.textContent = index + 1;
+                chunkCounter.textContent = index + 1; // Display one-based index
                 currentChunkIndex = index;
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function saveCurrentChunk() {
+            const updatedText = textBox.value;
+            if (updatedText !== transcription[currentChunkIndex].text) {
+                fetch(`/project/${project.id}/update_transcription`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chunk_index: currentChunkIndex, // Use zero-based index
+                        updated_text: updatedText
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        transcription[currentChunkIndex].text = updatedText;
+                    }
+                });
+            }
+        }
+
+        function fetchTranscription() {
             const projectId = project.id;
             fetch(`/project/${projectId}/transcription`)
                 .then(response => response.json())
@@ -57,17 +91,40 @@
                         alert(data.error);
                     } else {
                         transcription = data;
-                        loadChunk(0);
+                        loadChunk(currentChunkIndex);
                     }
                 });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchTranscription();
         });
 
         document.getElementById('prev-chunk').addEventListener('click', () => {
+            saveCurrentChunk();
+            fetchTranscription();
             loadChunk(currentChunkIndex - 1);
         });
 
         document.getElementById('next-chunk').addEventListener('click', () => {
+            saveCurrentChunk();
+            fetchTranscription();
             loadChunk(currentChunkIndex + 1);
+        });
+
+        document.getElementById('reset-chunk').addEventListener('click', () => {
+            const chunk = transcription[currentChunkIndex];
+            const start = chunk.timestamp[0];
+            const end = chunk.timestamp[1];
+            const mp3Path = project.mp3_path.replace('uploads/', '');
+            audioSource.src = `/${mp3Path}#t=${start},${end}`;
+            audioPlayer.load();
+            audioPlayer.currentTime = start;
+            audioPlayer.play();
+            setTimeout(() => {
+                audioPlayer.pause();
+                audioPlayer.currentTime = start;
+            }, (end - start) * 1000);
         });
     </script>
 </body>

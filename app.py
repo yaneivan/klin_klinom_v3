@@ -237,6 +237,41 @@ def download_file(filename):
         app.logger.error(f'Range request error: {str(e)}')
         return send_file(file_path)
 
+@app.route('/project/<int:project_id>/update_transcription', methods=['POST'])
+def update_transcription(project_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    user_id = session['user_id']
+    data = request.json
+    chunk_index = data.get('chunk_index')
+    updated_text = data.get('updated_text')
+    print("Chunk index: ", chunk_index, "Updated text: ", updated_text)
+
+    if chunk_index is None or updated_text is None:
+        return jsonify({'error': 'Invalid data'}), 400
+
+    conn = get_db_connection()
+    project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
+    if project is None:
+        conn.close()
+        return jsonify({'error': 'Project not found'}), 404
+
+    try:
+        transcription_result = eval(project['transcription_result'])
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': 'Invalid transcription result format'}), 400
+
+    if chunk_index < 0 or chunk_index >= len(transcription_result):
+        conn.close()
+        return jsonify({'error': 'Chunk index out of range'}), 400
+
+    transcription_result[chunk_index]['text'] = updated_text
+    conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(transcription_result), project_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
