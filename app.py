@@ -8,6 +8,7 @@ import time
 from flask_cors import CORS
 import uuid
 from apscheduler.schedulers.background import BackgroundScheduler
+from mutagen.mp3 import MP3  # Import mutagen to get audio length
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -43,10 +44,25 @@ def init_db():
                 transcription_id TEXT,
                 transcription_status TEXT,
                 transcription_result TEXT,
+                created_at REAL NOT NULL,  -- Add created_at column
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS transcription_speed (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                audio_length REAL NOT NULL,
+                transcription_time REAL NOT NULL,
+                FOREIGN KEY (project_id) REFERENCES projects (id)
+            )
+        ''')
     conn.close()
+
+# Function to get audio length
+def get_audio_length(mp3_path):
+    audio = MP3(mp3_path)
+    return audio.info.length
 
 # Function to send audio file for transcription
 def send_for_transcription(mp3_path, transcription_id):
@@ -75,6 +91,13 @@ def update_transcription_status(project, conn):
                 if result_response.status_code == 200:
                     result = result_response.json()
                     conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
+                    conn.commit()
+                    # Calculate transcription time
+                    created_at = project['created_at']
+                    transcription_time = time.time() - created_at
+                    audio_length = get_audio_length(project['mp3_path'])
+                    conn.execute('INSERT INTO transcription_speed (project_id, audio_length, transcription_time) VALUES (?, ?, ?)', 
+                                 (project['id'], audio_length, transcription_time))
                     conn.commit()
         elif status_response.status_code == 404:
             conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', ('failed', project['id']))
@@ -151,8 +174,9 @@ def projects():
                 transcription_id = str(uuid.uuid4())  # Generate a unique ID for the transcription
                 status = send_for_transcription(filename, transcription_id)
                 if status == 'in_queue':
-                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status) VALUES (?, ?, ?, ?, ?)', 
-                                 (user_id, name, filename, transcription_id, 'in_queue'))
+                    created_at = time.time()  # Capture creation time
+                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at) VALUES (?, ?, ?, ?, ?, ?)', 
+                                 (user_id, name, filename, transcription_id, 'in_queue', created_at))
                     conn.commit()
         elif 'delete' in request.form:
             project_id = request.form['delete']
