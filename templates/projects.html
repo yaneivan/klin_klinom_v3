@@ -17,6 +17,26 @@
             border-color: #007bff;
             background-color: #f0f8ff;
         }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 255, 0.3); /* Blue theme */
+            border-radius: 50%;
+            border-top-color: #0000ff; /* Darker blue for the spinner */
+            animation: spin 1s ease-in-out infinite;
+            -webkit-animation: spin 1s ease-in-out infinite;
+            margin-left: 10px; /* Add margin to the left to position it to the right */
+        }
+        @keyframes spin {
+            to { -webkit-transform: rotate(360deg); }
+        }
+        @-webkit-keyframes spin {
+            to { -webkit-transform: rotate(360deg); }
+        }
+        .status {
+            display: inline-block; /* Ensure status text and spinner are on the same line */
+        }
     </style>
     <script>
         function updateStatus(projectId) {
@@ -26,6 +46,12 @@
                     const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
                     if (statusElement) {
                         statusElement.textContent = data.status;
+                        const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
+                        if (data.status !== 'completed') {
+                            spinnerElement.style.display = 'inline-block';
+                        } else {
+                            spinnerElement.style.display = 'none';
+                        }
                     }
                 });
         }
@@ -34,6 +60,7 @@
             const projects = document.querySelectorAll('.project');
             projects.forEach(project => {
                 const projectId = project.getAttribute('data-id');
+                updateStatus(projectId); // Call updateStatus immediately to show spinner if needed
                 setInterval(() => updateStatus(projectId), 5000); // Update every 5 seconds
             });
         }
@@ -41,6 +68,14 @@
         function handleProjectClick(event) {
             const projectDiv = event.currentTarget;
             const projectId = projectDiv.getAttribute('data-id');
+            const statusElement = projectDiv.querySelector('.status');
+            const status = statusElement.textContent.trim();
+
+            if (status !== 'completed') {
+                alert('This project is not yet completed. Please wait until the transcription is finished.');
+                return;
+            }
+
             window.location.href = `/editor/${projectId}`;
         }
 
@@ -105,6 +140,7 @@
             <div class="project-info">
                 <div class="project-name">{{ project['name'] }}</div>
                 <div class="status">{{ project['transcription_status'] }}</div>
+                <span class="loading-spinner"></span>
             </div>
             <form method="POST" action="{{ url_for('projects') }}" class="delete-form">
                 <input type="hidden" name="delete" value="{{ project['id'] }}">
