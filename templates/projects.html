@@ -37,11 +37,14 @@
         .status {
             display: inline-block; /* Ensure status text and spinner are on the same line */
         }
+        .status.completed {
+            color: green;
+        }
     </style>
     <script>
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
-            if (statusElement && statusElement.textContent.trim() === 'completed') {
+            if (statusElement && statusElement.classList.contains('completed')) {
                 return; // Stop updating if the status is already completed
             }
 
@@ -50,11 +53,13 @@
                 .then(data => {
                     if (statusElement) {
                         statusElement.textContent = data.status;
-                        const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
-                        if (data.status !== 'completed') {
-                            spinnerElement.style.display = 'inline-block';
-                        } else {
+                        if (data.status === 'completed') {
+                            statusElement.classList.add('completed');
+                            const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
                             spinnerElement.style.display = 'none';
+                        } else {
+                            const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
+                            spinnerElement.style.display = 'inline-block';
                         }
                     }
                 });
@@ -143,8 +148,10 @@
         <div class="project" data-id="{{ project['id'] }}">
             <div class="project-info">
                 <div class="project-name">{{ project['name'] }}</div>
-                <div class="status">{{ project['transcription_status'] }}</div>
+                <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">{{ project['transcription_status'] }}</div>
+                {% if project['transcription_status'] != 'completed' %}
                 <span class="loading-spinner"></span>
+                {% endif %}
             </div>
             <form method="POST" action="{{ url_for('projects') }}" class="delete-form">
                 <input type="hidden" name="delete" value="{{ project['id'] }}">
