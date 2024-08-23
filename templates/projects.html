@@ -40,10 +40,14 @@
     </style>
     <script>
         function updateStatus(projectId) {
+            const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
+            if (statusElement && statusElement.textContent.trim() === 'completed') {
+                return; // Stop updating if the status is already completed
+            }
+
             fetch(`/project/${projectId}/status`)
                 .then(response => response.json())
                 .then(data => {
-                    const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
                     if (statusElement) {
                         statusElement.textContent = data.status;
                         const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
