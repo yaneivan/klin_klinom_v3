@@ -116,6 +116,13 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(check_transcription_status, 'interval', seconds=30)  # Adjust the interval as needed
 scheduler.start()
 
+# Route for the root URL
+@app.route('/')
+def index():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return redirect(url_for('projects'))
+
 # Route for the login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
