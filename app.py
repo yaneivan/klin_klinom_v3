@@ -14,7 +14,6 @@ from openpyxl.utils import get_column_letter
 import tempfile
 import os
 
-
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 app.secret_key = 'your_secret_key'  # Change this to a secure secret key
@@ -85,7 +84,7 @@ def send_for_transcription(mp3_path, transcription_id):
 # Function to update transcription status
 def update_transcription_status(project, conn):
     transcription_id = project['transcription_id']
-    if transcription_id:
+    if transcription_id and project['transcription_status'] != 'completed':
         status_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/status/{transcription_id}')
         if status_response.status_code == 200:
             status = status_response.json()['status']
@@ -255,7 +254,6 @@ def editor(project_id):
 
     return render_template('editor.html', project=project_dict, project_id=project_id)
 
-
 @app.route('/project/<int:project_id>/transcription', methods=['GET'])
 def get_transcription(project_id):
     conn = get_db_connection()
@@ -324,7 +322,6 @@ def seconds_to_hms(seconds):
     minutes = int((seconds % 3600) // 60)
     seconds = int(seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
 
 @app.route('/project/<int:project_id>/export_excel', methods=['GET'])
 def export_excel(project_id):

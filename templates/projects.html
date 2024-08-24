@@ -7,61 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <style>
-        .file-upload {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-        }
-        .file-upload.dragover {
-            border-color: #007bff;
-            background-color: #f0f8ff;
-        }
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 0, 255, 0.3); /* Blue theme */
-            border-radius: 50%;
-            border-top-color: #0000ff; /* Darker blue for the spinner */
-            animation: spin 1s ease-in-out infinite;
-            -webkit-animation: spin 1s ease-in-out infinite;
-            margin-left: 10px; /* Add margin to the left to position it to the right */
-        }
-        @keyframes spin {
-            to { -webkit-transform: rotate(360deg); }
-        }
-        @-webkit-keyframes spin {
-            to { -webkit-transform: rotate(360deg); }
-        }
-        .status {
-            display: inline-block; /* Ensure status text and spinner are on the same line */
-        }
-        .status.completed {
-            color: green;
-        }
-        .delete-button, .export-button {
-            background-color: #e74c3c; /* Red color for delete button */
-            color: white;
-            padding: 12px 24px; /* Consistent padding */
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-left: 10px; /* Add space between buttons */
-        }
-
-        .export-button {
-            background-color: #4CAF50; /* Green color for export button */
-        }
-
-        .delete-button:hover {
-            background-color: #c0392b; /* Slightly darker red on hover */
-        }
-
-        .export-button:hover {
-            background-color: #45a049; /* Slightly darker green on hover */
-        }
     </style>
     <script>
         function updateStatus(projectId) {
@@ -175,13 +120,15 @@
                 <span class="loading-spinner"></span>
                 {% endif %}
             </div>
-            <form method="POST" action="{{ url_for('projects') }}" class="delete-form">
-                <input type="hidden" name="delete" value="{{ project['id'] }}">
-                <button type="submit" class="delete-button">Delete</button>
-            </form>
-            {% if project['transcription_status'] == 'completed' %}
-            <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button">Export to Excel</a>
-            {% endif %}
+            <div class="button-container">
+                <form method="POST" action="{{ url_for('projects') }}" class="delete-form">
+                    <input type="hidden" name="delete" value="{{ project['id'] }}">
+                    <button type="submit" class="delete-button">Delete</button>
+                </form>
+                {% if project['transcription_status'] == 'completed' %}
+                <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button">Export to Excel</a>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
 
