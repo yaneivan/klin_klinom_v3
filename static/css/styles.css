@@ -8,8 +8,8 @@ body {
     padding: 0;
 }
 
-/* Login Page Styles */
-.login-container {
+/* Login and Register Page Styles */
+.login-container, .register-container {
     background-color: #fff;
     padding: 40px;
     border-radius: 10px;
@@ -26,7 +26,7 @@ body {
     transform: translate(-50%, -50%);
 }
 
-.login-container h1 {
+.login-container h1, .register-container h1 {
     margin-bottom: 30px;
     color: #333;
     font-weight: 600;
@@ -34,84 +34,14 @@ body {
     text-align: center;
 }
 
-.login-container label {
+.login-container label, .register-container label {
     display: block;
     margin-bottom: 8px;
     color: #333;
 }
 
 .login-container input[type="text"], 
-.login-container input[type="password"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-.login-container input[type="submit"] {
-    width: 100%;
-    padding: 12px;
-    background-color: #4a90e2;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.login-container input[type="submit"]:hover {
-    background-color: #357ABD;
-}
-
-.login-container .extra-options {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.login-container .extra-options a {
-    color: #4a90e2;
-    text-decoration: none;
-    font-size: 14px;
-}
-
-.login-container .extra-options a:hover {
-    text-decoration: underline;
-}
-
-/* Register Page Styles */
-.register-container {
-    background-color: #fff;
-    padding: 40px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: auto;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-.register-container h1 {
-    margin-bottom: 30px;
-    color: #333;
-    font-weight: 600;
-    font-size: 24px;
-    text-align: center;
-}
-
-.register-container label {
-    display: block;
-    margin-bottom: 8px;
-    color: #333;
-}
-
+.login-container input[type="password"], 
 .register-container input[type="text"], 
 .register-container input[type="password"] {
     width: 100%;
@@ -122,7 +52,9 @@ body {
     font-size: 16px;
 }
 
-.register-container input[type="submit"] {
+.login-container input[type="submit"], 
+.register-container input[type="submit"], 
+.create-project input[type="submit"] {
     width: 100%;
     padding: 12px;
     background-color: #4a90e2;
@@ -133,21 +65,26 @@ body {
     cursor: pointer;
 }
 
-.register-container input[type="submit"]:hover {
+.login-container input[type="submit"]:hover, 
+.register-container input[type="submit"]:hover, 
+.create-project input[type="submit"]:hover {
     background-color: #357ABD;
 }
 
+.login-container .extra-options, 
 .register-container .extra-options {
     text-align: center;
     margin-top: 20px;
 }
 
+.login-container .extra-options a, 
 .register-container .extra-options a {
     color: #4a90e2;
     text-decoration: none;
     font-size: 14px;
 }
 
+.login-container .extra-options a:hover, 
 .register-container .extra-options a:hover {
     text-decoration: underline;
 }
@@ -257,20 +194,6 @@ body {
     margin-bottom: 10px;
 }
 
-.create-project input[type="submit"] {
-    padding: 12px;
-    background-color: #4a90e2;
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.create-project input[type="submit"]:hover {
-    background-color: #357ABD;
-}
-
 .editor-container {
     display: flex;
     flex-direction: column;
@@ -318,81 +241,118 @@ body {
     background-color: #357ABD;
 }
 
-        .project {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px;
-            border: 1px solid #ccc;
-            margin-bottom: 10px;
-            cursor: pointer;
-        }
-        .project-info {
-            flex-grow: 1;
-        }
-        .delete-button {
-            margin-left: 10px;
-        }
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #0000ff;
+    animation: spin 1s ease-in-out infinite;
+    -webkit-animation: spin 1s ease-in-out infinite;
+}
 
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 0, 255, 0.3); /* Blue theme */
-            border-radius: 50%;
-            border-top-color: #0000ff; /* Darker blue for the spinner */
-            animation: spin 1s ease-in-out infinite;
-            -webkit-animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { -webkit-transform: rotate(360deg); }
-        }
-        @-webkit-keyframes spin {
-            to { -webkit-transform: rotate(360deg); }
-        }
+@keyframes spin {
+    to { -webkit-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+    to { -webkit-transform: rotate(360deg); }
+}
 
+.export-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: background-color 0.3s ease;
+    margin-top: 10px;
+}
 
+.export-button:hover {
+    background-color: #45a049;
+}
 
-        .export-button {
-            background-color: #4CAF50; /* Darker green */
-            color: white;
-            padding: 12px 24px; /* Increased padding for better click area */
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            text-transform: uppercase; /* Uppercase text for better appearance */
-            letter-spacing: 1px; /* Slight letter spacing for readability */
-            transition: background-color 0.3s ease; /* Smooth transition for hover effect */
-            margin-top: 10px;
-        }
-        
-        .export-button:hover {
-            background-color: #45a049; /* Slightly darker green on hover */
-        }
+.delete-button, .export-button {
+    background-color: #e74c3c;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 10px;
+}
 
+.export-button {
+    background-color: #4CAF50;
+}
 
+.delete-button:hover {
+    background-color: #c0392b;
+}
 
-        .delete-button, .export-button {
-            background-color: #e74c3c; /* Red color for delete button */
-            color: white;
-            padding: 12px 24px; /* Consistent padding */
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-left: 10px; /* Add space between buttons */
-        }
-        
-        .export-button {
-            background-color: #4CAF50; /* Green color for export button */
-        }
-        
-        .delete-button:hover {
-            background-color: #c0392b; /* Slightly darker red on hover */
-        }
-        
-        .export-button:hover {
-            background-color: #45a049; /* Slightly darker green on hover */
-        }
+.export-button:hover {
+    background-color: #45a049;
+}
+
+.file-upload {
+    border: 2px dashed #ccc;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.file-upload.dragover {
+    border-color: #007bff;
+    background-color: #f0f8ff;
+}
+
+.status {
+    display: inline-block;
+}
+
+.status.completed {
+    color: green;
+}
+
+.button-container {
+    display: flex;
+    align-items: center;
+}
+
+.audio-player {
+    display: flex;
+    align-items: center;
+}
+
+#reset-chunk {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #4285F4;
+    border: none;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+#reset-chunk::before {
+    content: '▶';
+    margin-left: 5px;
+}
+
+.text-field {
+    border: 1px solid #ccc;
+    padding: 10px;
+    min-height: 100px;
+    overflow-y: auto;
+}
