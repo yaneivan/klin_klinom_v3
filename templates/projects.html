@@ -40,6 +40,28 @@
         .status.completed {
             color: green;
         }
+        .delete-button, .export-button {
+            background-color: #e74c3c; /* Red color for delete button */
+            color: white;
+            padding: 12px 24px; /* Consistent padding */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px; /* Add space between buttons */
+        }
+
+        .export-button {
+            background-color: #4CAF50; /* Green color for export button */
+        }
+
+        .delete-button:hover {
+            background-color: #c0392b; /* Slightly darker red on hover */
+        }
+
+        .export-button:hover {
+            background-color: #45a049; /* Slightly darker green on hover */
+        }
     </style>
     <script>
         function updateStatus(projectId) {
@@ -157,6 +179,9 @@
                 <input type="hidden" name="delete" value="{{ project['id'] }}">
                 <button type="submit" class="delete-button">Delete</button>
             </form>
+            {% if project['transcription_status'] == 'completed' %}
+            <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button">Export to Excel</a>
+            {% endif %}
         </div>
         {% endfor %}
 

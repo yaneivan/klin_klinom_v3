@@ -351,3 +351,48 @@ body {
         @-webkit-keyframes spin {
             to { -webkit-transform: rotate(360deg); }
         }
+
+
+
+        .export-button {
+            background-color: #4CAF50; /* Darker green */
+            color: white;
+            padding: 12px 24px; /* Increased padding for better click area */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            text-transform: uppercase; /* Uppercase text for better appearance */
+            letter-spacing: 1px; /* Slight letter spacing for readability */
+            transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+            margin-top: 10px;
+        }
+        
+        .export-button:hover {
+            background-color: #45a049; /* Slightly darker green on hover */
+        }
+
+
+
+        .delete-button, .export-button {
+            background-color: #e74c3c; /* Red color for delete button */
+            color: white;
+            padding: 12px 24px; /* Consistent padding */
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px; /* Add space between buttons */
+        }
+        
+        .export-button {
+            background-color: #4CAF50; /* Green color for export button */
+        }
+        
+        .delete-button:hover {
+            background-color: #c0392b; /* Slightly darker red on hover */
+        }
+        
+        .export-button:hover {
+            background-color: #45a049; /* Slightly darker green on hover */
+        }

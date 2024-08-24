@@ -9,6 +9,11 @@ from flask_cors import CORS
 import uuid
 from apscheduler.schedulers.background import BackgroundScheduler
 from mutagen.mp3 import MP3  # Import mutagen to get audio length
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+import tempfile
+import os
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -313,6 +318,60 @@ def update_transcription(project_id):
     conn.commit()
     conn.close()
     return jsonify({'success': True})
+
+def seconds_to_hms(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds = int(seconds % 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+@app.route('/project/<int:project_id>/export_excel', methods=['GET'])
+def export_excel(project_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    user_id = session['user_id']
+    conn = get_db_connection()
+    project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
+    conn.close()
+
+    if project is None:
+        return jsonify({'error': 'Project not found'}), 404
+
+    transcription_result = eval(project['transcription_result'])
+
+    # Create a workbook and add a worksheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Transcription"
+
+    # Define the headers
+    headers = ['Speaker', 'Text', 'Start Time', 'End Time', 'Start Time (h:m:s)', 'End Time (h:m:s)']
+    ws.append(headers)
+
+    # Populate the worksheet with transcription data
+    for entry in transcription_result:
+        speaker = entry['speaker']
+        text = entry['text']
+        start_time = entry['timestamp'][0]
+        end_time = entry['timestamp'][1]
+        start_time_hms = seconds_to_hms(start_time)
+        end_time_hms = seconds_to_hms(end_time)
+        ws.append([speaker, text, start_time, end_time, start_time_hms, end_time_hms])
+
+    # Adjust column widths
+    for column_cells in ws.columns:
+        length = max(len(str(cell.value)) for cell in column_cells)
+        ws.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 2
+
+    # Save the workbook to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        temp_file_path = tmp.name
+        wb.save(tmp.name)
+
+    # Serve the file for download
+    return send_file(temp_file_path, as_attachment=True, download_name=f"{project['name']}_transcription.xlsx")    
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
