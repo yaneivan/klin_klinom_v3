@@ -248,7 +248,8 @@ def editor(project_id):
     # Convert the Row object to a dictionary
     project_dict = dict(project)
 
-    return render_template('editor.html', project=project_dict)
+    return render_template('editor.html', project=project_dict, project_id=project_id)
+
 
 @app.route('/project/<int:project_id>/transcription', methods=['GET'])
 def get_transcription(project_id):
@@ -261,7 +262,7 @@ def get_transcription(project_id):
 
 @app.route('/uploads/<path:filename>')
 def download_file(filename):
-    file_path = os.path.join('uploads', filename)
+    file_path = os.path.join(filename)
     range_header = request.headers.get('Range', None)
     
     app.logger.debug(f'Range header: {range_header}')
