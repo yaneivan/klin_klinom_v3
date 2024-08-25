@@ -53,7 +53,7 @@
                 let chunk = transcriptionData[i];
                 let chunkElement = document.createElement('div');
                 chunkElement.className = 'chunk';
-                let speakerColor = chunk.speaker === 'SPEAKER_00' ? 'blue' : 'green';
+                let speakerColor = chunk.speaker === 'SPEAKER_00' ? '#FFA500' : '#9ACD32';
                 chunkElement.innerHTML = `
                     <button class="play-button" data-index="${i}">▶</button>
                     <div contenteditable="true" class="text-box" data-index="${i}" style="border-left: 4px solid ${speakerColor};">${chunk.text}</div>
