@@ -114,7 +114,17 @@
         <div class="project" data-id="{{ project['id'] }}">
             <div class="project-info">
                 <div class="project-name">{{ project['name'] }}</div>
-                <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">{{ project['transcription_status'] }}</div>
+                <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">
+                    {{ project['transcription_status'] }}
+                </div>
+                {% if project['estimated_completion_time'] %}
+                <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">
+                    {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
+                    (Will be finished at {{ project['estimated_completion_time'] }})
+                    {% endif %}
+                </div>
+                
+                {% endif %}
                 {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
                 <span class="loading-spinner"></span>
                 {% endif %}
@@ -127,6 +137,7 @@
                 <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button" style="display: {% if project['transcription_status'] == 'completed' %}inline-block{% else %}none{% endif %};">Export to Excel</a>
             </div>
         </div>
+        
         {% endfor %}
 
         <div class="create-project">

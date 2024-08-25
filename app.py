@@ -40,8 +40,7 @@ def init_db():
                 password TEXT NOT NULL
             )
         ''')
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS projects (
+        conn.execute('''            CREATE TABLE IF NOT EXISTS projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
@@ -49,7 +48,8 @@ def init_db():
                 transcription_id TEXT,
                 transcription_status TEXT,
                 transcription_result TEXT,
-                created_at REAL NOT NULL,  -- Add created_at column
+                created_at REAL NOT NULL,
+                estimated_completion_time REAL,  
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
@@ -64,6 +64,57 @@ def init_db():
         ''')
     conn.close()
 
+
+def update_transcription_status(project, conn):
+    transcription_id = project['transcription_id']
+    if transcription_id and project['transcription_status'] != 'completed':
+        status_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/status/{transcription_id}')
+        if status_response.status_code == 200:
+            status = status_response.json()['status']
+            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', (status, project['id']))
+            conn.commit()
+
+            if status == 'in_queue':
+                # Update estimated completion time if it's in queue
+                audio_length = get_audio_length(project['mp3_path'])
+                estimated_time = estimate_completion_time(audio_length)
+                conn.execute('UPDATE projects SET estimated_completion_time = ? WHERE id = ?', (estimated_time, project['id']))
+                conn.commit()
+
+            if status == 'completed':
+                result_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/transcribe/{transcription_id}')
+                if result_response.status_code == 200:
+                    result = result_response.json()
+                    conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
+                    conn.commit()
+
+                    # Calculate transcription time
+                    created_at = project['created_at']
+                    transcription_time = time.time() - created_at
+                    audio_length = get_audio_length(project['mp3_path'])
+                    conn.execute('INSERT INTO transcription_speed (project_id, audio_length, transcription_time) VALUES (?, ?, ?)', 
+                                 (project['id'], audio_length, transcription_time))
+                    conn.commit()
+        elif status_response.status_code == 404:
+            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', ('failed', project['id']))
+            conn.commit()
+
+
+def estimate_completion_time(audio_length):
+    conn = get_db_connection()
+    # Calculate average transcription speed (seconds of transcription per second of audio)
+    average_speed = conn.execute('SELECT AVG(transcription_time / audio_length) FROM transcription_speed').fetchone()[0]
+    conn.close()
+
+    if average_speed:
+        estimated_time = time.time() + (audio_length * average_speed)
+    else:
+        # If no data, assume a fixed speed, e.g., 1.5x real-time
+        estimated_time = time.time() + (audio_length * 1.5)
+    
+    return estimated_time
+
+
 # Function to get audio length
 def get_audio_length(mp3_path):
     audio = MP3(mp3_path)
@@ -77,14 +128,32 @@ def send_for_transcription(mp3_path, transcription_id):
             data = {'id': transcription_id}
             response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
             if response.status_code == 200:
-                return response.json()['status']
+                # Get the status from the response
+                status = response.json()['status']
+
+                # Calculate estimated completion time based on average speed
+                audio_length = get_audio_length(mp3_path)
+                conn = get_db_connection()
+                average_speed = conn.execute('SELECT AVG(transcription_time / audio_length) AS avg_speed FROM transcription_speed').fetchone()['avg_speed']
+                conn.close()
+
+                # If there's no past data, we can use a default average speed (e.g., 1x real-time)
+                if average_speed:
+                    estimated_time_seconds = time.time() + (audio_length * average_speed)
+                else:
+                    # Default speed of 1x real-time
+                    estimated_time_seconds = time.time() + audio_length
+
+                estimated_time = time.strftime('%H:%M', time.localtime(estimated_time_seconds))
+                return status, estimated_time
             elif response.status_code == 404:
-                return 'failed'
+                return 'failed', None
             else:
-                return None
+                return None, None
     except ConnectionError as e:
         print(f"Connection error: {e}")
-        return 'failed'
+        return 'failed', None
+
 
 # Function to update transcription status
 def update_transcription_status(project, conn):
@@ -188,12 +257,13 @@ def projects():
                 filename = os.path.join(app.config['UPLOAD_FOLDER'], mp3.filename)
                 mp3.save(filename)
                 transcription_id = str(uuid.uuid4())  # Generate a unique ID for the transcription
-                status = send_for_transcription(filename, transcription_id)
+                status, estimated_time = send_for_transcription(filename, transcription_id)
                 if status == 'in_queue' or status == 'failed':
                     created_at = time.time()  # Capture creation time
-                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at) VALUES (?, ?, ?, ?, ?, ?)', 
-                                 (user_id, name, filename, transcription_id, status, created_at))
+                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at, estimated_completion_time) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                                (user_id, name, filename, transcription_id, status, created_at, estimated_time))
                     conn.commit()
+
         elif 'delete' in request.form:
             project_id = request.form['delete']
             conn.execute('DELETE FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id))
