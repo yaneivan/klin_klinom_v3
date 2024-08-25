@@ -4,7 +4,7 @@ from pyannote.audio import Pipeline
 from pyannote.core import Segment
 
 class Transcriber:
-    def __init__(self, whisper_model_name = "openai/whisper-tiny", language='ru', device = device ) -> None:
+    def __init__(self, whisper_model_name = "openai/whisper-tiny", language='ru', device = "cpu" ) -> None:
         processor = WhisperProcessor.from_pretrained(whisper_model_name, language=language)
         model = WhisperForConditionalGeneration.from_pretrained(whisper_model_name)
 
