@@ -1,13 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Selection - klin_klinom_v2</title>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-    </style>
+{% extends "base.html" %}
+
+{% block title %} Editor - Klin Klinom v2 {% endblock %}
+
+{% block content %}
     <script>
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
@@ -100,15 +95,7 @@
             fileUpload.addEventListener('click', () => fileInput.click());
         });
     </script>
-</head>
-<body>
-    <div class="header">
-        <div class="title">klin_klinom_v2</div>
-        <div class="account-info">
-            <div class="avatar"></div>
-            <div class="email">{{ username }}</div>
-        </div>
-    </div>
+
 
     <div class="project-list">
         {% for project in projects %}
@@ -143,5 +130,7 @@
             </form>
         </div>
     </div>
-</body>
-</html>
+
+
+    
+{% endblock %}
