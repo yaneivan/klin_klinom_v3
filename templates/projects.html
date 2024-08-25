@@ -55,7 +55,7 @@
             const statusElement = projectDiv.querySelector('.status');
             const status = statusElement.textContent.trim();
 
-            if (status !== 'completed') {
+            if (status !== 'completed' && status !== 'failed') {
                 alert('This project is not yet completed. Please wait until the transcription is finished.');
                 return;
             }
