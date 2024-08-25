@@ -6,6 +6,7 @@
     <script>
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
+            const exportButton = document.querySelector(`.project[data-id="${projectId}"] .export-button`);
             if (statusElement && statusElement.classList.contains('completed')) {
                 return; // Stop updating if the status is already completed
             }
@@ -19,9 +20,15 @@
                             statusElement.classList.add('completed');
                             const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
                             spinnerElement.style.display = 'none';
+                            if (exportButton) {
+                                exportButton.style.display = 'inline-block'; // Show the export button
+                            }
                         } else {
                             const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
                             spinnerElement.style.display = 'inline-block';
+                            if (exportButton) {
+                                exportButton.style.display = 'none'; // Hide the export button
+                            }
                         }
                     }
                 });
@@ -96,7 +103,6 @@
         });
     </script>
 
-
     <div class="project-list">
         {% for project in projects %}
         <div class="project" data-id="{{ project['id'] }}">
@@ -112,9 +118,7 @@
                     <input type="hidden" name="delete" value="{{ project['id'] }}">
                     <button type="submit" class="delete-button">Delete</button>
                 </form>
-                {% if project['transcription_status'] == 'completed' %}
-                <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button">Export to Excel</a>
-                {% endif %}
+                <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button" style="display: {% if project['transcription_status'] == 'completed' %}inline-block{% else %}none{% endif %};">Export to Excel</a>
             </div>
         </div>
         {% endfor %}
@@ -130,7 +134,4 @@
             </form>
         </div>
     </div>
-
-
-    
 {% endblock %}
