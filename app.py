@@ -288,11 +288,11 @@ def update_transcription(project_id):
 
     user_id = session['user_id']
     data = request.json
-    chunk_index = data.get('chunk_index')
-    updated_text = data.get('updated_text')
-    print("Chunk index: ", chunk_index, "Updated text: ", updated_text)
+    app.logger.debug(f'Received data: {data}')  # Add this line to log the incoming data
 
-    if chunk_index is None or updated_text is None:
+    updates = data.get('updates', [])
+
+    if not updates:
         return jsonify({'error': 'Invalid data'}), 400
 
     conn = get_db_connection()
@@ -307,15 +307,20 @@ def update_transcription(project_id):
         conn.close()
         return jsonify({'error': 'Invalid transcription result format'}), 400
 
-    if chunk_index < 0 or chunk_index >= len(transcription_result):
-        conn.close()
-        return jsonify({'error': 'Chunk index out of range'}), 400
+    for update in updates:
+        chunk_index = update.get('chunk_index')
+        updated_text = update.get('updated_text')
 
-    transcription_result[chunk_index]['text'] = updated_text
+        if chunk_index < 0 or chunk_index >= len(transcription_result):
+            continue
+
+        transcription_result[chunk_index]['text'] = updated_text
+
     conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(transcription_result), project_id))
     conn.commit()
     conn.close()
     return jsonify({'success': True})
+
 
 def seconds_to_hms(seconds):
     hours = int(seconds // 3600)

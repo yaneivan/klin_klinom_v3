@@ -1,35 +1,33 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor - klin_klinom_v2</title>
+    <title>Editor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <style>
-
-    </style>
 </head>
 <body>
     <div class="editor-container">
         <div class="audio-player">
-            <button id="reset-chunk">▶</button>
+            <button id="reset-page">▶</button>
             <audio controls id="audio-player">
                 <source id="audio-source" src="{{ url_for('download_file', filename=project['mp3_path'].split('/')[-1]) }}" type="audio/mp3">
                 Your browser does not support the audio element.
             </audio>
         </div>
-        <div class="text-field" contenteditable="true" id="text-box"></div>
-        <div class="segment-navigation">
-            <button id="prev-chunk">Previous</button>
-            <span id="chunk-counter">1</span>
-            <button id="next-chunk">Next</button>
+        <div id="chunks-container">
+            <!-- Chunks will be dynamically loaded here -->
+        </div>
+        <div class="page-navigation">
+            <button id="prev-page">Previous</button>
+            <span id="page-counter">1</span>
+            <button id="next-page">Next</button>
         </div>
     </div>
     <script>
         let transcriptionData = [];
-        let currentChunkIndex = 0;
-        let originalText = '';
+        let currentPageIndex = 0;
+        const chunksPerPage = 5;
         const project_id = {{ project['id'] }};  // Add this line to define project_id
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -41,21 +39,32 @@
                 .then(response => response.json())
                 .then(data => {
                     transcriptionData = data;
-                    loadChunk(0);
+                    loadPage(0);
                 });
         }
 
-        function loadChunk(index) {
-            if (index < 0 || index >= transcriptionData.length) return;
+        function loadPage(index) {
+            if (index < 0 || index * chunksPerPage >= transcriptionData.length) return;
             
-            currentChunkIndex = index;
-            let chunk = transcriptionData[index];
-            
-            originalText = chunk.text;
-            document.getElementById('text-box').innerText = originalText;
-            
-            updateChunkCounter();
-            loadAudioSegment(chunk.timestamp[0], chunk.timestamp[1]);
+            currentPageIndex = index;
+            let startChunkIndex = index * chunksPerPage;
+            let endChunkIndex = Math.min(startChunkIndex + chunksPerPage, transcriptionData.length);
+
+            let chunksContainer = document.getElementById('chunks-container');
+            chunksContainer.innerHTML = '';
+
+            for (let i = startChunkIndex; i < endChunkIndex; i++) {
+                let chunk = transcriptionData[i];
+                let chunkElement = document.createElement('div');
+                chunkElement.className = 'chunk';
+                chunkElement.innerHTML = `
+                    <div contenteditable="true" class="text-box" data-index="${i}">${chunk.text}</div>
+                `;
+                chunksContainer.appendChild(chunkElement);
+            }
+
+            updatePageCounter();
+            loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
         }
 
         function loadAudioSegment(startTime, endTime) {
@@ -69,42 +78,66 @@
             audio.play();
         }
 
-        function saveChunk() {
-            let editedText = document.getElementById('text-box').innerText;
-            if (editedText !== originalText) {
-                let chunk = transcriptionData[currentChunkIndex];
-                chunk.text = editedText;
-                updateTranscription(chunk);
+        function savePage() {
+            let textBoxes = document.querySelectorAll('.text-box');
+            let updates = [];
+        
+            textBoxes.forEach(textBox => {
+                let chunkIndex = parseInt(textBox.getAttribute('data-index'));
+                let editedText = textBox.innerText;
+                if (editedText !== transcriptionData[chunkIndex].text) {
+                    transcriptionData[chunkIndex].text = editedText;
+                    updates.push({ chunk_index: chunkIndex, updated_text: editedText });
+                }
+            });
+        
+            if (updates.length > 0) {
+                updateTranscription(updates);
             }
         }
 
-        function updateTranscription(chunk) {
+        function updateTranscription(updates) {
+            console.log(`Sending updates: ${JSON.stringify(updates)}`);
             fetch(`/project/${project_id}/update_transcription`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ chunk_index: currentChunkIndex, updated_text: chunk.text })
+                body: JSON.stringify({ updates: updates })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Update successful:', data);
+            })
+            .catch(error => {
+                console.error('There was a problem with the update request:', error);
             });
         }
 
-        function updateChunkCounter() {
-            document.getElementById('chunk-counter').innerText = `${currentChunkIndex + 1} / ${transcriptionData.length}`;
+        function updatePageCounter() {
+            let totalPages = Math.ceil(transcriptionData.length / chunksPerPage);
+            document.getElementById('page-counter').innerText = `${currentPageIndex + 1} / ${totalPages}`;
         }
 
-        document.getElementById('prev-chunk').addEventListener('click', function() {
-            saveChunk();
-            loadChunk(currentChunkIndex - 1);
+        document.getElementById('prev-page').addEventListener('click', function() {
+            savePage();
+            loadPage(currentPageIndex - 1);
         });
 
-        document.getElementById('next-chunk').addEventListener('click', function() {
-            saveChunk();
-            loadChunk(currentChunkIndex + 1);
+        document.getElementById('next-page').addEventListener('click', function() {
+            savePage();
+            loadPage(currentPageIndex + 1);
         });
 
-        document.getElementById('reset-chunk').addEventListener('click', function() {
-            let chunk = transcriptionData[currentChunkIndex];
-            loadAudioSegment(chunk.timestamp[0], chunk.timestamp[1]);
+        document.getElementById('reset-page').addEventListener('click', function() {
+            let startChunkIndex = currentPageIndex * chunksPerPage;
+            let endChunkIndex = Math.min(startChunkIndex + chunksPerPage, transcriptionData.length);
+            loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
         });
     </script>
 </body>
