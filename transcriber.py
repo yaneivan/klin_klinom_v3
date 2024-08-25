@@ -4,7 +4,7 @@ from pyannote.audio import Pipeline
 from pyannote.core import Segment
 
 class Transcriber:
-    def __init__(self, whisper_model_name = "openai/whisper-tiny", language='ru' ) -> None:
+    def __init__(self, whisper_model_name = "openai/whisper-tiny", language='ru', device = device ) -> None:
         processor = WhisperProcessor.from_pretrained(whisper_model_name, language=language)
         model = WhisperForConditionalGeneration.from_pretrained(whisper_model_name)
 
@@ -14,14 +14,16 @@ class Transcriber:
             tokenizer=processor.tokenizer,
             feature_extractor=processor.feature_extractor,
             torch_dtype=torch.bfloat16,
-            device="cpu",
+            device=device,
             return_timestamps = True, 
             chunk_length_s=30,
         )
 
         self.speaker_segmentation_pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization-3.1",
-        use_auth_token="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")
+        use_auth_token="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", 
+        device = device,
+        )
 
 
 

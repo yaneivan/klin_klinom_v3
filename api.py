@@ -5,6 +5,7 @@ from io import BytesIO
 import os
 import time
 import threading
+import torch
 
 app = Flask(__name__)
 
@@ -13,9 +14,12 @@ transcription_results = {}
 transcription_statuses = {}
 queue = []
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 # Function to process transcription in a separate thread
 def process_transcription(audio_id, audio_stream):
-    transcriber = Transcriber(whisper_model_name="openai/whisper-tiny", language='ru')
+    print("Device detected: ", device)
+    transcriber = Transcriber(whisper_model_name="openai/whisper-tiny", language='ru', device = device)
 
     # Load the audio file and convert it to a format suitable for transcription
     waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
