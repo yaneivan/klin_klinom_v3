@@ -15,7 +15,7 @@ queue = []
 
 # Function to process transcription in a separate thread
 def process_transcription(audio_id, audio_stream):
-    transcriber = Transcriber()
+    transcriber = Transcriber(whisper_model_name="openai/whisper-tiny", language='ru')
 
     # Load the audio file and convert it to a format suitable for transcription
     waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
@@ -83,7 +83,5 @@ def get_queue_length():
     return jsonify({'length': len(queue)})
 
 if __name__ == '__main__':
-    # Initialize the Transcriber with the desired model and language
-    trans = Transcriber(whisper_model_name="openai/whisper-tiny", language='ru')
     # Start the Flask application
     app.run(host="0.0.0.0", port=4200, debug=True)
