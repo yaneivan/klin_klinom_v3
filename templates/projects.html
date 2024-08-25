@@ -23,6 +23,12 @@
                             if (exportButton) {
                                 exportButton.style.display = 'inline-block'; // Show the export button
                             }
+                        } else if (data.status === 'failed') {
+                            const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
+                            spinnerElement.style.display = 'none';
+                            if (exportButton) {
+                                exportButton.style.display = 'none'; // Hide the export button
+                            }
                         } else {
                             const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
                             spinnerElement.style.display = 'inline-block';
@@ -109,7 +115,7 @@
             <div class="project-info">
                 <div class="project-name">{{ project['name'] }}</div>
                 <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">{{ project['transcription_status'] }}</div>
-                {% if project['transcription_status'] != 'completed' %}
+                {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
                 <span class="loading-spinner"></span>
                 {% endif %}
             </div>
