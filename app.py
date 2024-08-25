@@ -310,11 +310,15 @@ def update_transcription(project_id):
     for update in updates:
         chunk_index = update.get('chunk_index')
         updated_text = update.get('updated_text')
+        updated_speaker = update.get('speaker')  # Get updated speaker if provided
 
         if chunk_index < 0 or chunk_index >= len(transcription_result):
             continue
 
-        transcription_result[chunk_index]['text'] = updated_text
+        if updated_text:
+            transcription_result[chunk_index]['text'] = updated_text
+        if updated_speaker:
+            transcription_result[chunk_index]['speaker'] = updated_speaker
 
     conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(transcription_result), project_id))
     conn.commit()

@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Flexbox container for each chunk */
+        .chunk {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .text-box {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 60px;
+            margin-right: 10px;
+        }
+
+        .speaker-selector {
+            width: 150px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
     <div class="editor-container">
@@ -28,7 +52,7 @@
         let transcriptionData = [];
         let currentPageIndex = 0;
         const chunksPerPage = 5;
-        const project_id = {{ project['id'] }};  // Add this line to define project_id
+        const project_id = {{ project['id'] }};
 
         document.addEventListener('DOMContentLoaded', function() {
             fetchTranscriptionData();
@@ -57,14 +81,38 @@
                 let chunk = transcriptionData[i];
                 let chunkElement = document.createElement('div');
                 chunkElement.className = 'chunk';
+                let speakerColor = chunk.speaker === 'SPEAKER_00' ? 'blue' : 'green';
                 chunkElement.innerHTML = `
-                    <div contenteditable="true" class="text-box" data-index="${i}">${chunk.text}</div>
+                    <div contenteditable="true" class="text-box" data-index="${i}" style="border-left: 4px solid ${speakerColor}; color: ${speakerColor};">${chunk.text}</div>
+                    <select class="speaker-selector" data-index="${i}">
+                        <option value="SPEAKER_00" ${chunk.speaker === 'SPEAKER_00' ? 'selected' : ''}>Speaker 00</option>
+                        <option value="SPEAKER_01" ${chunk.speaker === 'SPEAKER_01' ? 'selected' : ''}>Speaker 01</option>
+                    </select>
                 `;
                 chunksContainer.appendChild(chunkElement);
             }
 
             updatePageCounter();
             loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
+
+            // Add event listeners for speaker change and text editing
+            document.querySelectorAll('.speaker-selector').forEach(dropdown => {
+                dropdown.addEventListener('change', function() {
+                    const chunkIndex = parseInt(this.getAttribute('data-index'));
+                    const selectedSpeaker = this.value;
+                    transcriptionData[chunkIndex].speaker = selectedSpeaker;
+                    updateSpeaker(chunkIndex, selectedSpeaker);
+                    loadPage(currentPageIndex);  // Reload page to update styling
+                });
+            });
+
+            document.querySelectorAll('.text-box').forEach(textBox => {
+                textBox.addEventListener('input', function() {
+                    const chunkIndex = parseInt(this.getAttribute('data-index'));
+                    transcriptionData[chunkIndex].text = this.innerText;
+                    autoSave(chunkIndex);
+                });
+            });
         }
 
         function loadAudioSegment(startTime, endTime) {
@@ -78,26 +126,12 @@
             audio.play();
         }
 
-        function savePage() {
-            let textBoxes = document.querySelectorAll('.text-box');
-            let updates = [];
-        
-            textBoxes.forEach(textBox => {
-                let chunkIndex = parseInt(textBox.getAttribute('data-index'));
-                let editedText = textBox.innerText;
-                if (editedText !== transcriptionData[chunkIndex].text) {
-                    transcriptionData[chunkIndex].text = editedText;
-                    updates.push({ chunk_index: chunkIndex, updated_text: editedText });
-                }
-            });
-        
-            if (updates.length > 0) {
-                updateTranscription(updates);
-            }
+        function autoSave(chunkIndex) {
+            const updates = [{ chunk_index: chunkIndex, updated_text: transcriptionData[chunkIndex].text }];
+            updateTranscription(updates);
         }
 
         function updateTranscription(updates) {
-            console.log(`Sending updates: ${JSON.stringify(updates)}`);
             fetch(`/project/${project_id}/update_transcription`, {
                 method: 'POST',
                 headers: {
@@ -105,12 +139,7 @@
                 },
                 body: JSON.stringify({ updates: updates })
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 console.log('Update successful:', data);
             })
@@ -119,18 +148,22 @@
             });
         }
 
+        function updateSpeaker(chunkIndex, selectedSpeaker) {
+            transcriptionData[chunkIndex].speaker = selectedSpeaker;
+            const updates = [{ chunk_index: chunkIndex, speaker: selectedSpeaker }];
+            updateTranscription(updates);
+        }
+
         function updatePageCounter() {
             let totalPages = Math.ceil(transcriptionData.length / chunksPerPage);
             document.getElementById('page-counter').innerText = `${currentPageIndex + 1} / ${totalPages}`;
         }
 
         document.getElementById('prev-page').addEventListener('click', function() {
-            savePage();
             loadPage(currentPageIndex - 1);
         });
 
         document.getElementById('next-page').addEventListener('click', function() {
-            savePage();
             loadPage(currentPageIndex + 1);
         });
 
