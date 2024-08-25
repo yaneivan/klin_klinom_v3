@@ -241,6 +241,11 @@ def editor(project_id):
 
     user_id = session['user_id']
     conn = get_db_connection()
+
+    # Fetch the username
+    user = conn.execute('SELECT username FROM users WHERE id = ?', (user_id,)).fetchone()
+    username = user['username'] if user else 'Unknown'
+
     project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
     if project is None:
         conn.close()
@@ -252,7 +257,7 @@ def editor(project_id):
     # Convert the Row object to a dictionary
     project_dict = dict(project)
 
-    return render_template('editor.html', project=project_dict, project_id=project_id)
+    return render_template('editor.html', project=project_dict, project_id=project_id, username=username)
 
 @app.route('/project/<int:project_id>/transcription', methods=['GET'])
 def get_transcription(project_id):

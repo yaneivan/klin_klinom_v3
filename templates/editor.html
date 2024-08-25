@@ -1,37 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-        /* Flexbox container for each chunk */
-        .chunk {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
+{% extends "base.html" %}
 
-        .text-box {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            min-height: 60px;
-            margin-right: 10px;
-            color: black; /* Ensure text is black */
-        }
+{% block title %} Editor - Klin Klinom v2 {% endblock %}
 
-        .speaker-selector {
-            width: 150px;
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-    </style>
-</head>
-<body>
+{% block content %}
     <div class="editor-container">
         <div class="audio-player">
             <button id="reset-page">▶</button>
@@ -173,5 +144,6 @@
             loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
         });
     </script>
-</body>
-</html>
+
+
+{% endblock %}

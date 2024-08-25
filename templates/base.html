@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Site{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="title">Klin Klinom v2</a>
+        <div class="account-info">
+            <div class="avatar"></div>
+            <div class="email">{{ username }}</div>
+        </div>
+    </div>
+
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="footer">
+        <div class="project-name">Klin Klinom 2024</div>
+        <div class="contact-info">
+            DM me at telegram: <a href="https://t.me/ya_ne_ivan"><img src="/static/images/telegram_logo.png" alt="Telegram" class="telegram-logo"></a>
+        </div>
+    </footer>
+</body>
+</html>
