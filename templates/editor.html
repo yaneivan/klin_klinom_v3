@@ -20,6 +20,7 @@
             border-radius: 4px;
             min-height: 60px;
             margin-right: 10px;
+            color: black; /* Ensure text is black */
         }
 
         .speaker-selector {
@@ -83,7 +84,7 @@
                 chunkElement.className = 'chunk';
                 let speakerColor = chunk.speaker === 'SPEAKER_00' ? 'blue' : 'green';
                 chunkElement.innerHTML = `
-                    <div contenteditable="true" class="text-box" data-index="${i}" style="border-left: 4px solid ${speakerColor}; color: ${speakerColor};">${chunk.text}</div>
+                    <div contenteditable="true" class="text-box" data-index="${i}" style="border-left: 4px solid ${speakerColor};">${chunk.text}</div>
                     <select class="speaker-selector" data-index="${i}">
                         <option value="SPEAKER_00" ${chunk.speaker === 'SPEAKER_00' ? 'selected' : ''}>Speaker 00</option>
                         <option value="SPEAKER_01" ${chunk.speaker === 'SPEAKER_01' ? 'selected' : ''}>Speaker 01</option>
