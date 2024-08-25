@@ -94,7 +94,6 @@
             }
 
             updatePageCounter();
-            loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
 
             // Add event listeners for speaker change and text editing
             document.querySelectorAll('.speaker-selector').forEach(dropdown => {
