@@ -14,6 +14,7 @@ from openpyxl.utils import get_column_letter
 import tempfile
 import os
 from requests.exceptions import ConnectionError
+from functools import wraps
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -40,7 +41,8 @@ def init_db():
                 password TEXT NOT NULL
             )
         ''')
-        conn.execute('''            CREATE TABLE IF NOT EXISTS projects (
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
@@ -64,7 +66,6 @@ def init_db():
         ''')
     conn.close()
 
-
 def update_transcription_status(project, conn):
     transcription_id = project['transcription_id']
     if transcription_id and project['transcription_status'] != 'completed':
@@ -75,7 +76,6 @@ def update_transcription_status(project, conn):
             conn.commit()
 
             if status == 'in_queue':
-                # Update estimated completion time if it's in queue
                 audio_length = get_audio_length(project['mp3_path'])
                 estimated_time = estimate_completion_time(audio_length)
                 conn.execute('UPDATE projects SET estimated_completion_time = ? WHERE id = ?', (estimated_time, project['id']))
@@ -88,7 +88,6 @@ def update_transcription_status(project, conn):
                     conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
                     conn.commit()
 
-                    # Calculate transcription time
                     created_at = project['created_at']
                     transcription_time = time.time() - created_at
                     audio_length = get_audio_length(project['mp3_path'])
@@ -99,28 +98,22 @@ def update_transcription_status(project, conn):
             conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', ('failed', project['id']))
             conn.commit()
 
-
 def estimate_completion_time(audio_length):
     conn = get_db_connection()
-    # Calculate average transcription speed (seconds of transcription per second of audio)
     average_speed = conn.execute('SELECT AVG(transcription_time / audio_length) FROM transcription_speed').fetchone()[0]
     conn.close()
 
     if average_speed:
         estimated_time = time.time() + (audio_length * average_speed)
     else:
-        # If no data, assume a fixed speed, e.g., 2.5x real-time
         estimated_time = time.time() + (audio_length * 2.5)
     
     return estimated_time
 
-
-# Function to get audio length
 def get_audio_length(mp3_path):
     audio = MP3(mp3_path)
     return audio.info.length
 
-# Function to send audio file for transcription
 def send_for_transcription(mp3_path, transcription_id):
     try:
         with open(mp3_path, 'rb') as f:
@@ -128,20 +121,15 @@ def send_for_transcription(mp3_path, transcription_id):
             data = {'id': transcription_id}
             response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
             if response.status_code == 200:
-                # Get the status from the response
                 status = response.json()['status']
-
-                # Calculate estimated completion time based on average speed
                 audio_length = get_audio_length(mp3_path)
                 conn = get_db_connection()
                 average_speed = conn.execute('SELECT AVG(transcription_time / audio_length) AS avg_speed FROM transcription_speed').fetchone()['avg_speed']
                 conn.close()
 
-                # If there's no past data, we can use a default average speed (e.g., 1x real-time)
                 if average_speed:
                     estimated_time_seconds = time.time() + (audio_length * average_speed)
                 else:
-                    # Default speed of 1x real-time
                     estimated_time_seconds = time.time() + audio_length
 
                 estimated_time = time.strftime('%H:%M', time.localtime(estimated_time_seconds))
@@ -154,34 +142,6 @@ def send_for_transcription(mp3_path, transcription_id):
         print(f"Connection error: {e}")
         return 'failed', None
 
-
-# Function to update transcription status
-def update_transcription_status(project, conn):
-    transcription_id = project['transcription_id']
-    if transcription_id and project['transcription_status'] != 'completed':
-        status_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/status/{transcription_id}')
-        if status_response.status_code == 200:
-            status = status_response.json()['status']
-            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', (status, project['id']))
-            conn.commit()
-            if status == 'completed':
-                result_response = requests.get(f'{TRANSCRIPTION_API_BASE_URL}/transcribe/{transcription_id}')
-                if result_response.status_code == 200:
-                    result = result_response.json()
-                    conn.execute('UPDATE projects SET transcription_result = ? WHERE id = ?', (str(result), project['id']))
-                    conn.commit()
-                    # Calculate transcription time
-                    created_at = project['created_at']
-                    transcription_time = time.time() - created_at
-                    audio_length = get_audio_length(project['mp3_path'])
-                    conn.execute('INSERT INTO transcription_speed (project_id, audio_length, transcription_time) VALUES (?, ?, ?)', 
-                                 (project['id'], audio_length, transcription_time))
-                    conn.commit()
-        elif status_response.status_code == 404:
-            conn.execute('UPDATE projects SET transcription_status = ? WHERE id = ?', ('failed', project['id']))
-            conn.commit()
-
-# Background task to periodically check transcription status
 def check_transcription_status():
     conn = get_db_connection()
     projects = conn.execute('SELECT * FROM projects WHERE transcription_status != ?', ('completed',)).fetchall()
@@ -189,19 +149,24 @@ def check_transcription_status():
         update_transcription_status(project, conn)
     conn.close()
 
-# Initialize the background scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(check_transcription_status, 'interval', seconds=30)  # Adjust the interval as needed
 scheduler.start()
 
-# Route for the root URL
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/')
 def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     return redirect(url_for('projects'))
 
-# Route for the login page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -220,7 +185,6 @@ def login():
 
     return render_template('login.html')
 
-# Route for the registration page
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -236,16 +200,12 @@ def register():
 
     return render_template('register.html')
 
-# Route for the projects page
 @app.route('/projects', methods=['GET', 'POST'])
+@login_required
 def projects():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
     user_id = session['user_id']
     conn = get_db_connection()
 
-    # Fetch the username
     user = conn.execute('SELECT username FROM users WHERE id = ?', (user_id,)).fetchone()
     username = user['username'] if user else 'Unknown'
 
@@ -256,10 +216,10 @@ def projects():
             if mp3:
                 filename = os.path.join(app.config['UPLOAD_FOLDER'], mp3.filename)
                 mp3.save(filename)
-                transcription_id = str(uuid.uuid4())  # Generate a unique ID for the transcription
+                transcription_id = str(uuid.uuid4())
                 status, estimated_time = send_for_transcription(filename, transcription_id)
                 if status == 'in_queue' or status == 'failed':
-                    created_at = time.time()  # Capture creation time
+                    created_at = time.time()
                     conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at, estimated_completion_time) VALUES (?, ?, ?, ?, ?, ?, ?)', 
                                 (user_id, name, filename, transcription_id, status, created_at, estimated_time))
                     conn.commit()
@@ -274,30 +234,24 @@ def projects():
 
     return render_template('projects.html', projects=projects, username=username)
 
-# Route for viewing a specific project
 @app.route('/project/<int:project_id>')
+@login_required
 def view_project(project_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
     user_id = session['user_id']
     conn = get_db_connection()
     project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
     if project is None:
         conn.close()
-        abort(404)  # Return a 404 error if the project does not exist or does not belong to the user
+        abort(404)
 
     update_transcription_status(project, conn)
     conn.close()
 
     return render_template('view_project.html', project=project)
 
-# Route for serving project status
 @app.route('/project/<int:project_id>/status', methods=['GET'])
+@login_required
 def get_project_status(project_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
     user_id = session['user_id']
     conn = get_db_connection()
     project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
@@ -308,33 +262,29 @@ def get_project_status(project_id):
 
     return jsonify({'status': project['transcription_status']})
 
-# Route for the audio editing page
 @app.route('/editor/<int:project_id>')
+@login_required
 def editor(project_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
     user_id = session['user_id']
     conn = get_db_connection()
 
-    # Fetch the username
     user = conn.execute('SELECT username FROM users WHERE id = ?', (user_id,)).fetchone()
     username = user['username'] if user else 'Unknown'
 
     project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
     if project is None:
         conn.close()
-        abort(404)  # Return a 404 error if the project does not exist or does not belong to the user
+        abort(404)
 
     update_transcription_status(project, conn)
     conn.close()
 
-    # Convert the Row object to a dictionary
     project_dict = dict(project)
 
     return render_template('editor.html', project=project_dict, project_id=project_id, username=username)
 
 @app.route('/project/<int:project_id>/transcription', methods=['GET'])
+@login_required
 def get_transcription(project_id):
     conn = get_db_connection()
     project = conn.execute('SELECT * FROM projects WHERE id = ?', (project_id,)).fetchone()
@@ -362,13 +312,11 @@ def download_file(filename):
         return send_file(file_path)
 
 @app.route('/project/<int:project_id>/update_transcription', methods=['POST'])
+@login_required
 def update_transcription(project_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
     user_id = session['user_id']
     data = request.json
-    app.logger.debug(f'Received data: {data}')  # Add this line to log the incoming data
+    app.logger.debug(f'Received data: {data}')
 
     updates = data.get('updates', [])
 
@@ -390,7 +338,7 @@ def update_transcription(project_id):
     for update in updates:
         chunk_index = update.get('chunk_index')
         updated_text = update.get('updated_text')
-        updated_speaker = update.get('speaker')  # Get updated speaker if provided
+        updated_speaker = update.get('speaker')
 
         if chunk_index < 0 or chunk_index >= len(transcription_result):
             continue
@@ -405,7 +353,6 @@ def update_transcription(project_id):
     conn.close()
     return jsonify({'success': True})
 
-
 def seconds_to_hms(seconds):
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
@@ -413,10 +360,8 @@ def seconds_to_hms(seconds):
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 @app.route('/project/<int:project_id>/export_excel', methods=['GET'])
+@login_required
 def export_excel(project_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-
     user_id = session['user_id']
     conn = get_db_connection()
     project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
@@ -427,16 +372,13 @@ def export_excel(project_id):
 
     transcription_result = eval(project['transcription_result'])
 
-    # Create a workbook and add a worksheet
     wb = Workbook()
     ws = wb.active
     ws.title = "Transcription"
 
-    # Define the headers
     headers = ['Speaker', 'Text', 'Start Time', 'End Time', 'Start Time (h:m:s)', 'End Time (h:m:s)']
     ws.append(headers)
 
-    # Populate the worksheet with transcription data
     for entry in transcription_result:
         speaker = entry['speaker']
         text = entry['text']
@@ -446,17 +388,14 @@ def export_excel(project_id):
         end_time_hms = seconds_to_hms(end_time)
         ws.append([speaker, text, start_time, end_time, start_time_hms, end_time_hms])
 
-    # Adjust column widths
     for column_cells in ws.columns:
         length = max(len(str(cell.value)) for cell in column_cells)
         ws.column_dimensions[get_column_letter(column_cells[0].column)].width = length + 2
 
-    # Save the workbook to a temporary file
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         temp_file_path = tmp.name
         wb.save(tmp.name)
 
-    # Serve the file for download
     return send_file(temp_file_path, as_attachment=True, download_name=f"{project['name']}_transcription.xlsx")    
 
 if __name__ == '__main__':
