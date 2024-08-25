@@ -55,6 +55,7 @@
                 chunkElement.className = 'chunk';
                 let speakerColor = chunk.speaker === 'SPEAKER_00' ? 'blue' : 'green';
                 chunkElement.innerHTML = `
+                    <button class="play-button" data-index="${i}">▶</button>
                     <div contenteditable="true" class="text-box" data-index="${i}" style="border-left: 4px solid ${speakerColor};">${chunk.text}</div>
                     <select class="speaker-selector" data-index="${i}">
                         <option value="SPEAKER_00" ${chunk.speaker === 'SPEAKER_00' ? 'selected' : ''}>Speaker 00</option>
@@ -82,6 +83,16 @@
                     const chunkIndex = parseInt(this.getAttribute('data-index'));
                     transcriptionData[chunkIndex].text = this.innerText;
                     autoSave(chunkIndex);
+                });
+            });
+
+            // Add event listeners for play buttons
+            document.querySelectorAll('.play-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chunkIndex = parseInt(this.getAttribute('data-index'));
+                    const startTime = transcriptionData[chunkIndex].timestamp[0];
+                    const endTime = transcriptionData[chunkIndex].timestamp[1];
+                    loadAudioSegment(startTime, endTime);
                 });
             });
         }
@@ -144,6 +155,4 @@
             loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
         });
     </script>
-
-
 {% endblock %}

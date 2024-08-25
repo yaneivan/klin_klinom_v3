@@ -109,8 +109,8 @@ def estimate_completion_time(audio_length):
     if average_speed:
         estimated_time = time.time() + (audio_length * average_speed)
     else:
-        # If no data, assume a fixed speed, e.g., 1.5x real-time
-        estimated_time = time.time() + (audio_length * 1.5)
+        # If no data, assume a fixed speed, e.g., 2.5x real-time
+        estimated_time = time.time() + (audio_length * 2.5)
     
     return estimated_time
 
