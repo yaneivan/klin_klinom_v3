@@ -13,6 +13,7 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 import tempfile
 import os
+from requests.exceptions import ConnectionError
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -70,16 +71,20 @@ def get_audio_length(mp3_path):
 
 # Function to send audio file for transcription
 def send_for_transcription(mp3_path, transcription_id):
-    with open(mp3_path, 'rb') as f:
-        files = {'audio_file': f}
-        data = {'id': transcription_id}
-        response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
-        if response.status_code == 200:
-            return response.json()['status']
-        elif response.status_code == 404:
-            return 'failed'
-        else:
-            return None
+    try:
+        with open(mp3_path, 'rb') as f:
+            files = {'audio_file': f}
+            data = {'id': transcription_id}
+            response = requests.post(f'{TRANSCRIPTION_API_BASE_URL}/transcribe', files=files, data=data)
+            if response.status_code == 200:
+                return response.json()['status']
+            elif response.status_code == 404:
+                return 'failed'
+            else:
+                return None
+    except ConnectionError as e:
+        print(f"Connection error: {e}")
+        return 'failed'
 
 # Function to update transcription status
 def update_transcription_status(project, conn):
@@ -184,10 +189,10 @@ def projects():
                 mp3.save(filename)
                 transcription_id = str(uuid.uuid4())  # Generate a unique ID for the transcription
                 status = send_for_transcription(filename, transcription_id)
-                if status == 'in_queue':
+                if status == 'in_queue' or status == 'failed':
                     created_at = time.time()  # Capture creation time
                     conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at) VALUES (?, ?, ?, ?, ?, ?)', 
-                                 (user_id, name, filename, transcription_id, 'in_queue', created_at))
+                                 (user_id, name, filename, transcription_id, status, created_at))
                     conn.commit()
         elif 'delete' in request.form:
             project_id = request.form['delete']
