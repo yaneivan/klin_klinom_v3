@@ -123,7 +123,6 @@
                     (Will be finished at {{ project['estimated_completion_time'] }})
                     {% endif %}
                 </div>
-                
                 {% endif %}
                 {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
                 <span class="loading-spinner"></span>
@@ -137,7 +136,6 @@
                 <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button" style="display: {% if project['transcription_status'] == 'completed' %}inline-block{% else %}none{% endif %};">Export to Excel</a>
             </div>
         </div>
-        
         {% endfor %}
 
         <div class="create-project">
