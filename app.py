@@ -158,8 +158,20 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('login'))
+
+        # Verify if the user exists in the database
+        conn = get_db_connection()
+        user = conn.execute('SELECT id FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        conn.close()
+
+        if not user:
+            # User doesn't exist, clear the session and redirect to login
+            session.clear()
+            return redirect(url_for('login'))
+
         return f(*args, **kwargs)
     return decorated_function
+
 
 @app.route('/')
 def index():
