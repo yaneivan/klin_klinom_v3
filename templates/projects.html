@@ -7,6 +7,7 @@
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
             const exportButton = document.querySelector(`.project[data-id="${projectId}"] .export-button`);
+            const estimatedCompletionElement = document.querySelector(`.project[data-id="${projectId}"] .estimated-completion`);
             if (statusElement && statusElement.classList.contains('completed')) {
                 return; // Stop updating if the status is already completed
             }
@@ -16,26 +17,43 @@
                 .then(data => {
                     if (statusElement) {
                         statusElement.textContent = data.status;
+                        const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
                         if (data.status === 'completed') {
                             statusElement.classList.add('completed');
-                            const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
-                            spinnerElement.style.display = 'none';
+                            if (spinnerElement) {
+                                spinnerElement.style.display = 'none';
+                            }
                             if (exportButton) {
                                 exportButton.style.display = 'inline-block'; // Show the export button
                             }
                         } else if (data.status === 'failed') {
-                            const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
-                            spinnerElement.style.display = 'none';
+                            if (spinnerElement) {
+                                spinnerElement.style.display = 'none';
+                            }
                             if (exportButton) {
                                 exportButton.style.display = 'none'; // Hide the export button
+                            }
+                            if (estimatedCompletionElement) {
+                                estimatedCompletionElement.style.display = 'none'; // Hide the estimated completion time
                             }
                         } else {
-                            const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
-                            spinnerElement.style.display = 'inline-block';
+                            if (spinnerElement) {
+                                spinnerElement.style.display = 'inline-block';
+                            }
                             if (exportButton) {
                                 exportButton.style.display = 'none'; // Hide the export button
                             }
+                            if (estimatedCompletionElement) {
+                                estimatedCompletionElement.style.display = 'inline-block'; // Show the estimated completion time
+                            }
                         }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    const spinnerElement = document.querySelector(`.project[data-id="${projectId}"] .loading-spinner`);
+                    if (spinnerElement) {
+                        spinnerElement.style.display = 'none';
                     }
                 });
         }
@@ -117,13 +135,9 @@
                 <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">
                     {{ project['transcription_status'] }}
                 </div>
-                {% if project['estimated_completion_time'] %}
-                <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">
-                    {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
+                <div class="estimated-completion" style="display: {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}inline-block{% else %}none{% endif %};">
                     (Will be finished at {{ project['estimated_completion_time'] }})
-                    {% endif %}
                 </div>
-                {% endif %}
                 {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
                 <span class="loading-spinner"></span>
                 {% endif %}
