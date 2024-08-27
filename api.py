@@ -9,6 +9,8 @@ import torch
 
 app = Flask(__name__)
 
+model = "openai/whisper-medium"
+
 # In-memory storage for transcription results and statuses
 transcription_results = {}
 transcription_statuses = {}
@@ -19,11 +21,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Function to process transcription in a separate thread
 def process_transcription(audio_id, audio_stream):
     print("Device detected: ", device)
-    transcriber = Transcriber(whisper_model_name="openai/whisper-tiny", language='ru', device = device)
+    transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
 
     # Load the audio file and convert it to a format suitable for transcription
     waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
     numpy_waveform = waveform.mean(dim=0).numpy()
+
+    # Update status to processing
+    transcription_statuses[audio_id] = 'processing'
 
     # Perform transcription with speaker detection
     result = transcriber.transcribe_with_speaker_detection({
@@ -74,8 +79,13 @@ def get_status(id):
     # Retrieve the transcription status for the given ID
     status = transcription_statuses.get(id)
     if status:
-        # Return the transcription status if found
-        return jsonify({'status': status})
+        # If the status is 'in_queue', include the position in the queue
+        if status == 'in_queue' and id in queue:
+            position = queue.index(id) + 1
+            return jsonify({'status': f'in_queue, position {position}'})
+        else:
+            # Return the transcription status if found
+            return jsonify({'status': status})
     else:
         # Return an error if the transcription status is not found
         return jsonify({'error': 'Status not found'}), 404

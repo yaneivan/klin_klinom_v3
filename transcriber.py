@@ -37,14 +37,34 @@ class Transcriber:
         # run the pipeline on an audio file
         diarization = self.speaker_segmentation_pipeline(data_to_transcribe, num_speakers=2)
 
-        transcribtion = self.speech_recognition_pipe(data_to_transcribe)['chunks']
+        transcription = self.speech_recognition_pipe(data_to_transcribe, return_timestamps="word", chunk_length_s=30,
+            batch_size=1)['chunks']
 
-        for i in range(len(transcribtion)):
-            transcribtion[i].update({"speaker": self.get_speaker(diarization, transcribtion[i]['timestamp'][0],  transcribtion[i]['timestamp'][1])})
+        for i in range(len(transcription)):
+            speaker = self.get_speaker(diarization, transcription[i]['timestamp'][0],  transcription[i]['timestamp'][1])
 
-        print(transcribtion[i])
+            if speaker == 'No_speaker':
+                if [i] == 0:
+                    speaker = 'SPEAKER_00'
+                else: 
+                    speaker = transcription[i-1]['speaker']
+            transcription[i].update({"speaker": speaker})
+
+        for i in range(len(transcription)):
+            transcription[i]['timestamp'] = list(transcription[i]['timestamp'])
+
+        concated_transcription = [transcription[0]]
+        for i in range(1, len(transcription)):
+            if concated_transcription[-1]['speaker'] == transcription[i]['speaker']:
+                concated_transcription[-1]['text'] += ' '
+                concated_transcription[-1]['text'] += transcription[i]['text']
+                concated_transcription[-1]['timestamp'][1] = transcription[i]['timestamp'][1]
+            else:
+                concated_transcription.append(transcription[i])
+                
+            
         
-        return transcribtion
+        return concated_transcription
 
 if __name__ == "__main__":
     print("Проснулся")

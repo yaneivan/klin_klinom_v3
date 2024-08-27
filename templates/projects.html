@@ -7,7 +7,6 @@
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
             const exportButton = document.querySelector(`.project[data-id="${projectId}"] .export-button`);
-            const estimatedCompletionElement = document.querySelector(`.project[data-id="${projectId}"] .estimated-completion`);
             if (statusElement && statusElement.classList.contains('completed')) {
                 return; // Stop updating if the status is already completed
             }
@@ -33,18 +32,12 @@
                             if (exportButton) {
                                 exportButton.style.display = 'none'; // Hide the export button
                             }
-                            if (estimatedCompletionElement) {
-                                estimatedCompletionElement.style.display = 'none'; // Hide the estimated completion time
-                            }
                         } else {
                             if (spinnerElement) {
                                 spinnerElement.style.display = 'inline-block';
                             }
                             if (exportButton) {
                                 exportButton.style.display = 'none'; // Hide the export button
-                            }
-                            if (estimatedCompletionElement) {
-                                estimatedCompletionElement.style.display = 'inline-block'; // Show the estimated completion time
                             }
                         }
                     }
@@ -134,9 +127,6 @@
                 <div class="project-name">{{ project['name'] }}</div>
                 <div class="status {% if project['transcription_status'] == 'completed' %}completed{% endif %}">
                     {{ project['transcription_status'] }}
-                </div>
-                <div class="estimated-completion" style="display: {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}inline-block{% else %}none{% endif %};">
-                    (Will be finished at {{ project['estimated_completion_time'] }})
                 </div>
                 {% if project['transcription_status'] != 'completed' and project['transcription_status'] != 'failed' %}
                 <span class="loading-spinner"></span>
