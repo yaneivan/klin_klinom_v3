@@ -6,6 +6,7 @@ import os
 import time
 import threading
 import torch
+import traceback
 
 app = Flask(__name__)
 
@@ -18,34 +19,42 @@ queue = []
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Lock to ensure only one transcription process runs at a time
+transcription_lock = threading.Lock()
+
 # Function to process transcription in a separate thread
 def process_transcription(audio_id, audio_stream):
-    print("Device detected: ", device)
-    transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
+    with transcription_lock:
+        print("Device detected: ", device)
+        transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
 
-    # Load the audio file and convert it to a format suitable for transcription
-    waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
-    numpy_waveform = waveform.mean(dim=0).numpy()
+        # Load the audio file and convert it to a format suitable for transcription
+        waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
+        numpy_waveform = waveform.mean(dim=0).numpy()
 
-    # Update status to processing
-    transcription_statuses[audio_id] = 'processing'
+        # Update status to processing
+        transcription_statuses[audio_id] = 'processing'
 
-    # Perform transcription with speaker detection
-    try:
-        result = transcriber.transcribe_with_speaker_detection({
-            "waveform": waveform,
-            "sample_rate": sample_rate,
-            "raw": numpy_waveform,
-            "sampling_rate": sample_rate
-        })
-    except:
-        transcription_statuses[audio_id] = 'error while processing'
-        
+        # Perform transcription with speaker detection
+        try:
+            result = transcriber.transcribe_with_speaker_detection({
+                "waveform": waveform,
+                "sample_rate": sample_rate,
+                "raw": numpy_waveform,
+                "sampling_rate": sample_rate
+            })
+        except Exception as e:
+            traceback_str = traceback.format_exc()
+            print(f"An error occurred: {traceback_str}")
+            # print(f"An error occurred: {e}")
+            transcription_statuses[audio_id] = 'error while processing'
+            queue.remove(audio_id)
+            return
 
-    # Update transcription results and statuses
-    transcription_results[audio_id] = result
-    transcription_statuses[audio_id] = 'completed'
-    queue.remove(audio_id)
+        # Update transcription results and statuses
+        transcription_results[audio_id] = result
+        transcription_statuses[audio_id] = 'completed'
+        queue.remove(audio_id)
 
 # Route to handle transcription requests
 @app.route('/transcribe', methods=['POST'])
@@ -84,9 +93,9 @@ def get_status(id):
     if status:
         # If the status is 'in_queue', include the position in the queue
         if status == 'in_queue' and id in queue:
-            position = queue.index(id) + 1
-            if position == 1:
-                return jsonify({'status': f'processing'})
+            position = queue.index(id)
+            if position == 0:
+                return jsonify({'status': 'processing'})
             return jsonify({'status': f'in_queue, position {position}'})
         else:
             # Return the transcription status if found
