@@ -31,12 +31,16 @@ def process_transcription(audio_id, audio_stream):
     transcription_statuses[audio_id] = 'processing'
 
     # Perform transcription with speaker detection
-    result = transcriber.transcribe_with_speaker_detection({
-        "waveform": waveform,
-        "sample_rate": sample_rate,
-        "raw": numpy_waveform,
-        "sampling_rate": sample_rate
-    })
+    try:
+        result = transcriber.transcribe_with_speaker_detection({
+            "waveform": waveform,
+            "sample_rate": sample_rate,
+            "raw": numpy_waveform,
+            "sampling_rate": sample_rate
+        })
+    except:
+        transcription_statuses[audio_id] = 'error while processing'
+        
 
     # Update transcription results and statuses
     transcription_results[audio_id] = result
@@ -51,7 +55,6 @@ def transcribe():
     audio_id = request.form.get('id')
     audio_stream = audio.read()
 
-    # Add the audio ID to the queue and set its initial status
     queue.append(audio_id)
     transcription_statuses[audio_id] = 'in_queue'
 
@@ -82,6 +85,8 @@ def get_status(id):
         # If the status is 'in_queue', include the position in the queue
         if status == 'in_queue' and id in queue:
             position = queue.index(id) + 1
+            if position == 1:
+                return jsonify({'status': f'processing'})
             return jsonify({'status': f'in_queue, position {position}'})
         else:
             # Return the transcription status if found
