@@ -22,6 +22,7 @@
     </div>
     <script>
         let transcriptionData = [];
+        let markedForTraining = [];
         let currentPageIndex = 0;
         const chunksPerPage = 5;
         const project_id = {{ project['id'] }};
@@ -35,6 +36,11 @@
                 .then(response => response.json())
                 .then(data => {
                     transcriptionData = data;
+                    return fetch(`/project/${project_id}/marked_for_training`);
+                })
+                .then(response => response.json())
+                .then(data => {
+                    markedForTraining = data.marked_for_training;
                     loadPage(0);
                 });
         }
@@ -54,14 +60,14 @@
                 let chunkElement = document.createElement('div');
                 chunkElement.className = 'chunk';
                 let speakerColor = chunk.speaker === 'SPEAKER_00' ? '#FFA500' : '#9ACD32';
-                chunkElement.innerHTML = `
-                    <button class="play-button" data-index="${i}">▶</button>
+                chunkElement.innerHTML = 
+                    `<button class="play-button" data-index="${i}">▶</button>
                     <div contenteditable="true" class="text-box" data-index="${i}" style="border-left: 4px solid ${speakerColor};">${chunk.text}</div>
                     <select class="speaker-selector" data-index="${i}">
                         <option value="SPEAKER_00" ${chunk.speaker === 'SPEAKER_00' ? 'selected' : ''}>Speaker 00</option>
                         <option value="SPEAKER_01" ${chunk.speaker === 'SPEAKER_01' ? 'selected' : ''}>Speaker 01</option>
                     </select>
-                `;
+                    <button class="training-button" data-index="${i}">Toggle Training</button>`;
                 chunksContainer.appendChild(chunkElement);
             }
 
@@ -94,6 +100,26 @@
                     const endTime = transcriptionData[chunkIndex].timestamp[1];
                     loadAudioSegment(startTime, endTime);
                 });
+            });
+
+            // Add event listeners for training buttons
+            document.querySelectorAll('.training-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chunkIndex = parseInt(this.getAttribute('data-index'));
+                    toggleTraining(chunkIndex);
+                });
+            });
+
+            // Set button colors and text based on markedForTraining
+            document.querySelectorAll('.training-button').forEach(button => {
+                const chunkIndex = parseInt(button.getAttribute('data-index'));
+                if (markedForTraining.includes(chunkIndex)) {
+                    button.style.backgroundColor = 'green';
+                    button.innerText = 'Marked for Training';
+                } else {
+                    button.style.backgroundColor = 'grey';
+                    button.innerText = 'Not Marked for Training';
+                }
             });
         }
 
@@ -154,5 +180,33 @@
             let endChunkIndex = Math.min(startChunkIndex + chunksPerPage, transcriptionData.length);
             loadAudioSegment(transcriptionData[startChunkIndex].timestamp[0], transcriptionData[endChunkIndex - 1].timestamp[1]);
         });
+
+        function toggleTraining(chunkIndex) {
+            fetch(`/project/${project_id}/toggle_training`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ chunk_index: chunkIndex })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Toggle training successful:', data);
+                markedForTraining = data.marked_for_training;
+                // Update the button color and text based on the response
+                document.querySelectorAll(`.training-button[data-index="${chunkIndex}"]`).forEach(button => {
+                    if (markedForTraining.includes(chunkIndex)) {
+                        button.style.backgroundColor = 'green';
+                        button.innerText = 'Marked for Training';
+                    } else {
+                        button.style.backgroundColor = 'grey';
+                        button.innerText = 'Not Marked for Training';
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('There was a problem with the toggle training request:', error);
+            });
+        }
     </script>
 {% endblock %}

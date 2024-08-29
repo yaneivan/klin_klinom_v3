@@ -7,9 +7,12 @@ import time
 import threading
 import torch
 import traceback
+import numpy as np
 
 app = Flask(__name__)
 
+# model = "openai/whisper-large-v3"
+# model = "distil-whisper/distil-large-v3"
 model = "openai/whisper-medium"
 
 # In-memory storage for transcription results and statuses
@@ -28,12 +31,19 @@ def process_transcription(audio_id, audio_stream):
         print("Device detected: ", device)
         transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
 
-        # Load the audio file and convert it to a format suitable for transcription
-        waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
-        numpy_waveform = waveform.mean(dim=0).numpy()
+        try:
+            # Load the audio file and convert it to a format suitable for transcription
+            waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
+            numpy_waveform = waveform.mean(dim=0).numpy()
 
-        # Update status to processing
-        transcription_statuses[audio_id] = 'processing'
+            # Update status to processing
+            transcription_statuses[audio_id] = 'processing'
+        except Exception as e:
+            traceback_str = traceback.format_exc()
+            print(f"An error occurred:  {traceback_str}")
+            transcription_statuses[audio_id] = 'failed'
+            queue.remove(audio_id)
+            return 
 
         # Perform transcription with speaker detection
         try:
@@ -47,7 +57,7 @@ def process_transcription(audio_id, audio_stream):
             traceback_str = traceback.format_exc()
             print(f"An error occurred: {traceback_str}")
             # print(f"An error occurred: {e}")
-            transcription_statuses[audio_id] = 'error while processing'
+            transcription_statuses[audio_id] = 'failed'
             queue.remove(audio_id)
             return
 

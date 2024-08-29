@@ -15,6 +15,7 @@ import tempfile
 import os
 from requests.exceptions import ConnectionError
 from functools import wraps
+import json
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -51,7 +52,8 @@ def init_db():
                 transcription_status TEXT,
                 transcription_result TEXT,
                 created_at REAL NOT NULL,
-                estimated_completion_time REAL,  
+                estimated_completion_time REAL,
+                marked_for_training TEXT,  -- New column for marked chunks
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
@@ -409,6 +411,59 @@ def export_excel(project_id):
         wb.save(tmp.name)
 
     return send_file(temp_file_path, as_attachment=True, download_name=f"{project['name']}_transcription.xlsx")    
+
+@app.route('/project/<int:project_id>/toggle_training', methods=['POST'])
+@login_required
+def toggle_training(project_id):
+    user_id = session['user_id']
+    data = request.json
+    chunk_index = data.get('chunk_index')
+
+    if chunk_index is None:
+        return jsonify({'error': 'Invalid data'}), 400
+
+    conn = get_db_connection()
+    project = conn.execute('SELECT * FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
+
+    if project is None:
+        conn.close()
+        return jsonify({'error': 'Project not found'}), 404
+
+    marked_for_training = project['marked_for_training']
+    if marked_for_training:
+        marked_for_training = json.loads(marked_for_training)
+    else:
+        marked_for_training = []
+
+    if chunk_index in marked_for_training:
+        marked_for_training.remove(chunk_index)
+    else:
+        marked_for_training.append(chunk_index)
+
+    conn.execute('UPDATE projects SET marked_for_training = ? WHERE id = ?', (json.dumps(marked_for_training), project_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'marked_for_training': marked_for_training})
+
+@app.route('/project/<int:project_id>/marked_for_training', methods=['GET'])
+@login_required
+def get_marked_for_training(project_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    project = conn.execute('SELECT marked_for_training FROM projects WHERE id = ? AND user_id = ?', (project_id, user_id)).fetchone()
+    conn.close()
+
+    if project is None:
+        return jsonify({'error': 'Project not found'}), 404
+
+    marked_for_training = project['marked_for_training']
+    if marked_for_training:
+        marked_for_training = json.loads(marked_for_training)
+    else:
+        marked_for_training = []
+
+    return jsonify({'marked_for_training': marked_for_training})
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

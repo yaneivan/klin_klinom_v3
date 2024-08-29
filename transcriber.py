@@ -2,6 +2,7 @@ from transformers import WhisperProcessor, WhisperForConditionalGeneration, pipe
 import torch
 from pyannote.audio import Pipeline
 from pyannote.core import Segment
+import traceback
 
 class Transcriber:
     def __init__(self, whisper_model_name = "openai/whisper-tiny", language='ru', device = "cpu" ) -> None:
@@ -17,6 +18,7 @@ class Transcriber:
             device=device,
             return_timestamps = True, 
             chunk_length_s=30,
+            stride_length_s=5
         )
 
         self.speaker_segmentation_pipeline = Pipeline.from_pretrained(
@@ -39,31 +41,48 @@ class Transcriber:
 
         transcription = self.speech_recognition_pipe(data_to_transcribe, return_timestamps="word", chunk_length_s=30,
             batch_size=1)['chunks']
+        
+        print("Just from the oven:", transcription[0])
 
         for i in range(len(transcription)):
             speaker = self.get_speaker(diarization, transcription[i]['timestamp'][0],  transcription[i]['timestamp'][1])
 
-            if speaker == 'No_speaker':
-                if [i] == 0:
-                    speaker = 'SPEAKER_00'
-                else: 
-                    speaker = transcription[i-1]['speaker']
-            transcription[i].update({"speaker": speaker})
+            try:
+                if speaker == 'No_speaker':
+                    if i == 0:
+                        speaker = 'SPEAKER_00'
+                    else: 
+                        speaker = transcription[i-1]['speaker']
+                transcription[i].update({"speaker": speaker})
+            except Exception as e:
+                traceback_str = traceback.format_exc()
+                print(f"Af error occurred: {traceback_str}")
+                print("i:", i)
+                print("Transcription:", transcription)
+
+        print("Before saving:", transcription[0])
+
+        import pickle
+
+        with open('transcription.pkl', 'wb') as file:
+            pickle.dump(transcription, file)
 
         for i in range(len(transcription)):
             transcription[i]['timestamp'] = list(transcription[i]['timestamp'])
 
         concated_transcription = [transcription[0]]
         for i in range(1, len(transcription)):
-            if concated_transcription[-1]['speaker'] == transcription[i]['speaker']:
+            if (concated_transcription[-1]['speaker'] == transcription[i]['speaker']):
                 concated_transcription[-1]['text'] += ' '
                 concated_transcription[-1]['text'] += transcription[i]['text']
-                concated_transcription[-1]['timestamp'][1] = transcription[i]['timestamp'][1]
+                concated_transcription[-1]['timestamp'][1] = float(transcription[i]['timestamp'][1])
             else:
                 concated_transcription.append(transcription[i])
                 
             
-        
+        for i in concated_transcription:
+            print(i)
+            
         return concated_transcription
 
 if __name__ == "__main__":
