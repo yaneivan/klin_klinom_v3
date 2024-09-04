@@ -11,9 +11,10 @@ import numpy as np
 
 app = Flask(__name__)
 
-# model = "openai/whisper-large-v3"
+model = "openai/whisper-large-v3"
 # model = "distil-whisper/distil-large-v3"
-model = "openai/whisper-medium"
+# model = "openai/whisper-medium"
+# model = "openai/whisper-tiny"
 
 # In-memory storage for transcription results and statuses
 transcription_results = {}

@@ -18,7 +18,7 @@ class Transcriber:
             device=device,
             return_timestamps = True, 
             chunk_length_s=30,
-            stride_length_s=5
+            # stride_length_s=5
         )
 
         self.speaker_segmentation_pipeline = Pipeline.from_pretrained(
@@ -39,10 +39,11 @@ class Transcriber:
         # run the pipeline on an audio file
         diarization = self.speaker_segmentation_pipeline(data_to_transcribe, num_speakers=2)
 
-        transcription = self.speech_recognition_pipe(data_to_transcribe, return_timestamps="word", chunk_length_s=30,
+        transcription = self.speech_recognition_pipe(data_to_transcribe, chunk_length_s=30,
+                                                    #  return_timestamps="word", 
             batch_size=1)['chunks']
         
-        print("Just from the oven:", transcription[0])
+        # print("Just from the oven:", transcription[0])
 
         for i in range(len(transcription)):
             speaker = self.get_speaker(diarization, transcription[i]['timestamp'][0],  transcription[i]['timestamp'][1])
@@ -60,30 +61,32 @@ class Transcriber:
                 print("i:", i)
                 print("Transcription:", transcription)
 
-        print("Before saving:", transcription[0])
+        return transcription
 
-        import pickle
+        # print("Before saving:", transcription[0])
 
-        with open('transcription.pkl', 'wb') as file:
-            pickle.dump(transcription, file)
+        # import pickle
 
-        for i in range(len(transcription)):
-            transcription[i]['timestamp'] = list(transcription[i]['timestamp'])
+        # with open('transcription.pkl', 'wb') as file:
+        #     pickle.dump(transcription, file)
 
-        concated_transcription = [transcription[0]]
-        for i in range(1, len(transcription)):
-            if (concated_transcription[-1]['speaker'] == transcription[i]['speaker']):
-                concated_transcription[-1]['text'] += ' '
-                concated_transcription[-1]['text'] += transcription[i]['text']
-                concated_transcription[-1]['timestamp'][1] = float(transcription[i]['timestamp'][1])
-            else:
-                concated_transcription.append(transcription[i])
+        # for i in range(len(transcription)):
+        #     transcription[i]['timestamp'] = list(transcription[i]['timestamp'])
+
+        # concated_transcription = [transcription[0]]
+        # for i in range(1, len(transcription)):
+        #     if (concated_transcription[-1]['speaker'] == transcription[i]['speaker']) and ( (transcription[i]['timestamp'][1] - concated_transcription[-1]['timestamp'][0]) < 20 ):
+        #         concated_transcription[-1]['text'] += ' '
+        #         concated_transcription[-1]['text'] += transcription[i]['text']
+        #         concated_transcription[-1]['timestamp'][1] = float(transcription[i]['timestamp'][1])
+        #     else:
+        #         concated_transcription.append(transcription[i])
                 
             
-        for i in concated_transcription:
-            print(i)
+        # for i in concated_transcription:
+        #     print(i)
             
-        return concated_transcription
+        # return concated_transcription
 
 if __name__ == "__main__":
     print("Проснулся")
