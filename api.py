@@ -11,10 +11,12 @@ import numpy as np
 
 app = Flask(__name__)
 
-model = "openai/whisper-large-v3"
+# model = "openai/whisper-large-v3"
 # model = "distil-whisper/distil-large-v3"
 # model = "openai/whisper-medium"
 # model = "openai/whisper-tiny"
+
+model = 'large-v3'
 
 # In-memory storage for transcription results and statuses
 transcription_results = {}
@@ -51,8 +53,9 @@ def process_transcription(audio_id, audio_stream):
             result = transcriber.transcribe_with_speaker_detection({
                 "waveform": waveform,
                 "sample_rate": sample_rate,
-                "raw": numpy_waveform,
-                "sampling_rate": sample_rate
+                "BytesIO": BytesIO(audio_stream), 
+                # "raw": numpy_waveform,
+                # "sampling_rate": sample_rate
             })
         except Exception as e:
             traceback_str = traceback.format_exc()

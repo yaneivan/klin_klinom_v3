@@ -1,30 +1,40 @@
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, pipeline
+# from transformers import WhisperProcessor, WhisperForConditionalGeneration, pipeline
+from transformers import pipeline
+from faster_whisper import WhisperModel
 import torch
 from pyannote.audio import Pipeline
 from pyannote.core import Segment
 import traceback
+import os
 
 class Transcriber:
     def __init__(self, whisper_model_name = "openai/whisper-tiny", language='ru', device = "cpu" ) -> None:
-        processor = WhisperProcessor.from_pretrained(whisper_model_name, language=language)
-        model = WhisperForConditionalGeneration.from_pretrained(whisper_model_name)
+        # processor = WhisperProcessor.from_pretrained(whisper_model_name, language=language)
+        # model = WhisperForConditionalGeneration.from_pretrained(whisper_model_name)
 
-        self.speech_recognition_pipe = pipeline(
-            "automatic-speech-recognition",
-            model=whisper_model_name,
-            tokenizer=processor.tokenizer,
-            feature_extractor=processor.feature_extractor,
-            torch_dtype=torch.bfloat16,
-            device=device,
-            return_timestamps = True, 
-            chunk_length_s=30,
-            # stride_length_s=5
-        )
+        # self.speech_recognition_pipe = pipeline(
+        #     "automatic-speech-recognition",
+        #     model=whisper_model_name,
+        #     tokenizer=processor.tokenizer,
+        #     feature_extractor=processor.feature_extractor,
+        #     torch_dtype=torch.bfloat16,
+        #     device=device,
+        #     return_timestamps = True, 
+        #     chunk_length_s=30,
+        #     # stride_length_s=5
+        # )
+        self.device = device
+
+        # download_root = "/app/models"
+        download_root = "/models"
+        os.makedirs(download_root, exist_ok=True)
+        self.model = WhisperModel(whisper_model_name, device=str(device), compute_type="int8", 
+                             download_root = download_root)
 
         self.speaker_segmentation_pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization-3.1",
         use_auth_token="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", 
-        ).to(device)
+        )
 
 
 
@@ -36,14 +46,27 @@ class Transcriber:
             return speaker
         
     def transcribe_with_speaker_detection(self, data_to_transcribe):
+        self.speaker_segmentation_pipeline.to(self.device)
+        
         # run the pipeline on an audio file
         diarization = self.speaker_segmentation_pipeline(data_to_transcribe, num_speakers=2)
 
-        transcription = self.speech_recognition_pipe(data_to_transcribe, chunk_length_s=30,
-                                                    #  return_timestamps="word", 
-            batch_size=1)['chunks']
+        self.speaker_segmentation_pipeline.to(torch.device('cpu'))
+        # transcription = self.speech_recognition_pipe(data_to_transcribe, chunk_length_s=30,
+            # batch_size=1)['chunks']
+
+        print("Data to transcribe:", data_to_transcribe["waveform"])
+        print("\n\n\n", data_to_transcribe)
+
+        transcription = []
+        segments, info = self.model.transcribe(data_to_transcribe["BytesIO"], beam_size=5, language='ru', condition_on_previous_text=False, 
+                                               vad_filter=True )
+        for segment in segments:
+            transcription.append({"text":segment.text, "timestamp":[segment.start, segment.end]})
         
         # print("Just from the oven:", transcription[0])
+
+        # self.model.to(torch.device('cpu'))
 
         for i in range(len(transcription)):
             speaker = self.get_speaker(diarization, transcription[i]['timestamp'][0],  transcription[i]['timestamp'][1])

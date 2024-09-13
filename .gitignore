@@ -6,3 +6,4 @@ database.db
 /__pycache__
 *.mp3
 __pycache__/transcriber.cpython-310.pyc
+models/
