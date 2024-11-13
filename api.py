@@ -38,15 +38,20 @@ def process_transcription(audio_id, audio_stream):
 
         try:
             # Load the audio file and convert it to a format suitable for transcription
-            audio_data, sample_rate = sf.read(BytesIO(audio_stream))
+            audio_data, sample_rate = sf.read(BytesIO(audio_stream), dtype='float32')
             waveform = torch.tensor(audio_data).unsqueeze(0)
             numpy_waveform = waveform.mean(dim=0).numpy()
 
             # Update status to processing
             transcription_statuses[audio_id] = 'processing'
+        except sf.LibsndfileError as e:
+            print(f"Ошибка при открытии файла: {e}")
+            transcription_statuses[audio_id] = 'failed'
+            queue.remove(audio_id)
+            return
         except Exception as e:
             traceback_str = traceback.format_exc()
-            print(f"An error occurred:  {traceback_str}")
+            print(f"Произошла ошибка: {traceback_str}")
             transcription_statuses[audio_id] = 'failed'
             queue.remove(audio_id)
             return 
@@ -62,8 +67,7 @@ def process_transcription(audio_id, audio_stream):
             })
         except Exception as e:
             traceback_str = traceback.format_exc()
-            print(f"An error occurred: {traceback_str}")
-            # print(f"An error occurred: {e}")
+            print(f"Произошла ошибка: {traceback_str}")
             transcription_statuses[audio_id] = 'failed'
             queue.remove(audio_id)
             return
