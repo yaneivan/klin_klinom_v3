@@ -30,40 +30,40 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Lock to ensure only one transcription process runs at a time
 transcription_lock = threading.Lock()
 
-# Function to process transcription in a separate thread
+# Функция для обработки транскрипции в отдельном потоке
 def process_transcription(audio_id, audio_stream):
     with transcription_lock:
-        print("Device detected: ", device)
+        print("Устройство обнаружено: ", device)
         transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
 
         try:
-            # Load the audio file and convert it to a format suitable for transcription
-            audio_data, sample_rate = sf.read(BytesIO(audio_stream), dtype='float32')
-            waveform = torch.tensor(audio_data).unsqueeze(0)
-            numpy_waveform = waveform.mean(dim=0).numpy()
+            # Сохраняем временный файл
+            temp_file = BytesIO(audio_stream)
+            temp_file.seek(0)  # Перемещаем указатель в начало файла
+            
+            # Загружаем аудио с помощью torchaudio
+            waveform, sample_rate = torchaudio.load(temp_file)
+            
+            # Преобразуем в моно, если необходимо
+            if waveform.shape[0] > 1:
+                waveform = torch.mean(waveform, dim=0, keepdim=True)
 
-            # Update status to processing
+            # Обновляем статус на "обработка"
             transcription_statuses[audio_id] = 'processing'
-        except sf.LibsndfileError as e:
-            print(f"Ошибка при открытии файла: {e}")
+            
+        except Exception as e:
+            traceback_str = traceback.format_exc()
+            print(f"Произошла ошибка при обработке аудио: {traceback_str}")
             transcription_statuses[audio_id] = 'failed'
             queue.remove(audio_id)
             return
-        except Exception as e:
-            traceback_str = traceback.format_exc()
-            print(f"Произошла ошибка: {traceback_str}")
-            transcription_statuses[audio_id] = 'failed'
-            queue.remove(audio_id)
-            return 
 
-        # Perform transcription with speaker detection
+        # Выполняем транскрипцию с определением говорящего
         try:
             result = transcriber.transcribe_with_speaker_detection({
                 "waveform": waveform,
                 "sample_rate": sample_rate,
-                "BytesIO": BytesIO(audio_stream), 
-                # "raw": numpy_waveform,
-                # "sampling_rate": sample_rate
+                "BytesIO": BytesIO(audio_stream)
             })
         except Exception as e:
             traceback_str = traceback.format_exc()
