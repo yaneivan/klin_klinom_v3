@@ -9,6 +9,8 @@ import torch
 import traceback
 import numpy as np
 import soundfile as sf
+import tempfile
+import wave
 
 app = Flask(__name__)
 
@@ -37,18 +39,25 @@ def process_transcription(audio_id, audio_stream):
         transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
 
         try:
-            # Сохраняем временный файл
-            temp_file = BytesIO(audio_stream)
-            temp_file.seek(0)  # Перемещаем указатель в начало файла
-            
-            # Загружаем аудио с помощью torchaudio
-            waveform, sample_rate = torchaudio.load(temp_file)
+            # Создаем временный файл
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_wav:
+                temp_filename = temp_wav.name
+                
+                # Конвертируем входной поток в WAV формат
+                with wave.open(temp_wav, 'wb') as wav_file:
+                    wav_file.setnchannels(1)  # моно
+                    wav_file.setsampwidth(2)  # 16 бит
+                    wav_file.setframerate(16000)  # 16кГц
+                    wav_file.writeframes(audio_stream)
+
+            # Загружаем аудио с помощью torchaudio из временного файла
+            waveform, sample_rate = torchaudio.load(temp_filename)
             
             # Преобразуем в моно, если необходимо
             if waveform.shape[0] > 1:
                 waveform = torch.mean(waveform, dim=0, keepdim=True)
 
-            # Обновляем статус на "обработка"
+            # Обновляем статус
             transcription_statuses[audio_id] = 'processing'
             
         except Exception as e:
@@ -57,8 +66,15 @@ def process_transcription(audio_id, audio_stream):
             transcription_statuses[audio_id] = 'failed'
             queue.remove(audio_id)
             return
+        finally:
+            # Удаляем временный файл
+            if 'temp_filename' in locals():
+                try:
+                    os.remove(temp_filename)
+                except:
+                    pass
 
-        # Выполняем транскрипцию с определением говорящего
+        # Выполняем транскрипцию
         try:
             result = transcriber.transcribe_with_speaker_detection({
                 "waveform": waveform,
