@@ -8,6 +8,7 @@ import threading
 import torch
 import traceback
 import numpy as np
+import soundfile as sf
 
 app = Flask(__name__)
 
@@ -36,7 +37,8 @@ def process_transcription(audio_id, audio_stream):
 
         try:
             # Load the audio file and convert it to a format suitable for transcription
-            waveform, sample_rate = torchaudio.load(BytesIO(audio_stream))
+            audio_data, sample_rate = sf.read(BytesIO(audio_stream))
+            waveform = torch.tensor(audio_data).unsqueeze(0)
             numpy_waveform = waveform.mean(dim=0).numpy()
 
             # Update status to processing
