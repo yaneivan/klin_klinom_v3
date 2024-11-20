@@ -20,7 +20,8 @@ app = Flask(__name__)
 # model = "openai/whisper-tiny"
 
 # model = 'large-v3'
-model = "small"
+# model = "small"
+model = "deepdml/faster-whisper-large-v3-turbo-ct2"
 
 # In-memory storage for transcription results and statuses
 transcription_results = {}
