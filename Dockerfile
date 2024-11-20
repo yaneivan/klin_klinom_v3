@@ -13,6 +13,8 @@ RUN pip install faster-whisper flask numpy pyannote.audio transformers
 
 RUN pip install transformers -U
 
+RUN pip install pytest
+
 RUN mkdir -p /app/models
 RUN mkdir -p /app/tests
 
