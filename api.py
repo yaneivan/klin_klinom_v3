@@ -21,7 +21,8 @@ app = Flask(__name__)
 
 # model = 'large-v3'
 # model = "small"
-model = "deepdml/faster-whisper-large-v3-turbo-ct2"
+model = "tiny"
+# model = "deepdml/faster-whisper-large-v3-turbo-ct2"
 
 # In-memory storage for transcription results and statuses
 transcription_results = {}
@@ -38,7 +39,7 @@ def process_transcription(audio_id, audio_stream):
     with transcription_lock:
         print("Устройство обнаружено: ", device)
         transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
-
+        print("audio stream:", audio_stream)
         try:
             # Создаем временный файл
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_wav:
