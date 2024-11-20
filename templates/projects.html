@@ -3,6 +3,27 @@
 {% block title %} Projects - Klin Klinom v2 {% endblock %}
 
 {% block content %}
+    <style>
+        .contact-me-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: background-color 0.3s ease;
+        }
+
+        .contact-me-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+
     <script>
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
@@ -67,7 +88,7 @@
             const status = statusElement.textContent.trim();
 
             if (status !== 'completed' && status !== 'failed') {
-                alert('This project is not yet completed. Please wait until the transcription is finished.');
+                alert('Этот проект еще не завершен. Пожалуйста, подождите, пока транскрипция завершится.');
                 return;
             }
 
@@ -90,14 +111,14 @@
             fileInput.files = event.dataTransfer.files;
             // Display the file name
             const fileName = fileInput.files[0].name;
-            event.currentTarget.querySelector('p').textContent = `File selected: ${fileName}`;
+            event.currentTarget.querySelector('p').textContent = `Выбран файл: ${fileName}`;
         }
 
         function handleFileInputChange(event) {
             const fileInput = event.currentTarget;
             const fileName = fileInput.files[0].name;
             const fileUpload = fileInput.closest('.file-upload');
-            fileUpload.querySelector('p').textContent = `File selected: ${fileName}`;
+            fileUpload.querySelector('p').textContent = `Выбран файл: ${fileName}`;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -135,22 +156,24 @@
             <div class="button-container">
                 <form method="POST" action="{{ url_for('projects') }}" class="delete-form">
                     <input type="hidden" name="delete" value="{{ project['id'] }}">
-                    <button type="submit" class="delete-button">Delete</button>
+                    <button type="submit" class="delete-button">Удалить</button>
                 </form>
-                <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button" style="display: {% if project['transcription_status'] == 'completed' %}inline-block{% else %}none{% endif %};">Export to Excel</a>
+                <a href="{{ url_for('export_excel', project_id=project['id']) }}" class="export-button" style="display: {% if project['transcription_status'] == 'completed' %}inline-block{% else %}none{% endif %};">Экспорт в Excel</a>
             </div>
         </div>
         {% endfor %}
 
         <div class="create-project">
             <form method="POST" enctype="multipart/form-data">
-                <input type="text" name="name" placeholder="Project Name" required>
+                <input type="text" name="name" placeholder="Название проекта" required>
                 <div class="file-upload">
                     <input type="file" name="mp3" accept="audio/mp3" required style="display: none;">
-                    <p>Drag & Drop your MP3 file here or click to select</p>
+                    <p>Перетащите ваш MP3 файл сюда или нажмите, чтобы выбрать</p>
                 </div>
-                <input type="submit" value="Create Project">
+                <input type="submit" value="Создать проект">
             </form>
         </div>
     </div>
+
+    <button class="contact-me-button">Связаться со мной</button>
 {% endblock %}
