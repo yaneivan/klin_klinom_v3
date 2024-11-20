@@ -14,9 +14,11 @@ RUN pip install faster-whisper flask numpy pyannote.audio transformers
 RUN pip install transformers -U
 
 RUN mkdir -p /app/models
+RUN mkdir -p /app/tests
 
 COPY api.py /app/
 COPY transcriber.py /app/
+COPY tests/ /app/tests/
 
 EXPOSE 4200
 
