@@ -3,27 +3,6 @@
 {% block title %} Projects - Klin Klinom v2 {% endblock %}
 
 {% block content %}
-    <style>
-        .contact-me-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            transition: background-color 0.3s ease;
-        }
-
-        .contact-me-button:hover {
-            background-color: #0056b3;
-        }
-    </style>
-
     <script>
         function updateStatus(projectId) {
             const statusElement = document.querySelector(`.project[data-id="${projectId}"] .status`);
@@ -174,6 +153,4 @@
             </form>
         </div>
     </div>
-
-    <button class="contact-me-button">Связаться со мной</button>
 {% endblock %}
