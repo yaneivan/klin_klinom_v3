@@ -553,3 +553,31 @@ body {
     transform: translate(-50%, -50%);
     font-size: 14px;
 }
+
+.statistics-message {
+    background-color: #e0f7fa;
+    border: 2px solid #00acc1;
+    border-radius: 20px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-size: 18px;
+    color: #00796b;
+    position: relative;
+}
+
+.statistics-message::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: #e0f7fa;
+    border: 2px solid #00acc1;
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}

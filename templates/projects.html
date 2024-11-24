@@ -120,7 +120,8 @@
         });
     </script>
 
-    <div class="project-list">
+<div class="project-list">
+    {% if projects %}
         {% for project in projects %}
         <div class="project" data-id="{{ project['id'] }}">
             <div class="project-info">
@@ -141,16 +142,26 @@
             </div>
         </div>
         {% endfor %}
+    {% else %}
+        <p>Нет проектов. Создайте новый проект, чтобы начать.</p>
+    {% endif %}
 
-        <div class="create-project">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="text" name="name" placeholder="Название проекта" required>
-                <div class="file-upload">
-                    <input type="file" name="mp3" accept="audio/mp3" required style="display: none;">
-                    <p>Перетащите ваш MP3 файл сюда или нажмите, чтобы выбрать</p>
-                </div>
-                <input type="submit" value="Создать проект">
-            </form>
-        </div>
+    <div class="create-project">
+        <form method="POST" enctype="multipart/form-data">
+            <input type="text" name="name" placeholder="Название проекта" required>
+            <div class="file-upload">
+                <input type="file" name="mp3" accept="audio/mp3" required style="display: none;">
+                <p>Перетащите ваш MP3 файл сюда или нажмите, чтобы выбрать</p>
+            </div>
+            <input type="submit" value="Создать проект">
+        </form>
     </div>
+</div>
+
+{% if average_speed_multiplier is not none %}
+    <div class="statistics-message">
+        <!-- <h3>Статистика по скорости обработки</h3> -->
+        <p>Средняя скорость обработки: x{{ average_speed_multiplier|round(2) }} относительно реального времени.</p>
+    </div>
+{% endif %}
 {% endblock %}

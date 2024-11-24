@@ -247,7 +247,7 @@ def projects():
                 status, estimated_time = send_for_transcription(filename, transcription_id)
                 if status == 'in_queue' or status == 'failed':
                     created_at = time.time()
-                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at, estimated_completion_time) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                    conn.execute('INSERT INTO projects (user_id, name, mp3_path, transcription_id, transcription_status, created_at, estimated_completion_time) VALUES (?, ?, ?, ?, ?, ?, ?)',
                                 (user_id, name, filename, transcription_id, status, created_at, estimated_time))
                     conn.commit()
 
@@ -257,9 +257,16 @@ def projects():
             conn.commit()
 
     projects = conn.execute('SELECT * FROM projects WHERE user_id = ?', (user_id,)).fetchall()
+
+    # Fetch average transcription speed
+    average_speed = conn.execute('SELECT AVG(transcription_time / audio_length) AS avg_speed FROM transcription_speed').fetchone()['avg_speed']
+    if average_speed:
+        average_speed_multiplier = 1 / average_speed  # Convert to multiplier of real-time
+    else:
+        average_speed_multiplier = None
     conn.close()
 
-    return render_template('projects.html', projects=projects, username=username)
+    return render_template('projects.html', projects=projects, username=username, average_speed_multiplier=average_speed_multiplier)
 
 @app.route('/project/<int:project_id>')
 @login_required
