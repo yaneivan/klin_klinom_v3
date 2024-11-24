@@ -16,6 +16,10 @@ import os
 from requests.exceptions import ConnectionError
 from functools import wraps
 import json
+from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
+
+
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -188,10 +192,10 @@ def login():
         password = request.form['password']
 
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
         conn.close()
 
-        if user:
+        if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             return redirect(url_for('projects'))
         else:
@@ -205,8 +209,17 @@ def register():
         username = request.form['username']
         password = request.form['password']
 
+        if not username or not password:
+            return render_template('register.html', error='Username and password are required')
+
         conn = get_db_connection()
-        conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, password))
+        existing_user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        if existing_user:
+            conn.close()
+            return render_template('register.html', error='Username already exists')
+
+        hashed_password = generate_password_hash(password)
+        conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, hashed_password))
         conn.commit()
         conn.close()
 
