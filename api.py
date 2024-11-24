@@ -1,16 +1,18 @@
 from flask import Flask, jsonify, request
 from transcriber import Transcriber
-import torchaudio
 from io import BytesIO
 import os
 import time
 import threading
 import torch
+import torchaudio
 import traceback
 import numpy as np
 import soundfile as sf
 import tempfile
 import wave
+import io
+import traceback
 
 app = Flask(__name__)
 
@@ -21,6 +23,7 @@ app = Flask(__name__)
 
 # model = 'large-v3'
 # model = "small"
+# model = "tiny"
 model = "deepdml/faster-whisper-large-v3-turbo-ct2"
 
 # In-memory storage for transcription results and statuses
@@ -34,81 +37,127 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 transcription_lock = threading.Lock()
 
 # Функция для обработки транскрипции в отдельном потоке
-def process_transcription(audio_id, audio_stream):
-    with transcription_lock:
-        print("Устройство обнаружено: ", device)
-        transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
-
-        try:
-            # Создаем временный файл
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_wav:
-                temp_filename = temp_wav.name
-                
-                # Конвертируем входной поток в WAV формат
-                with wave.open(temp_wav, 'wb') as wav_file:
-                    wav_file.setnchannels(1)  # моно
-                    wav_file.setsampwidth(2)  # 16 бит
-                    wav_file.setframerate(16000)  # 16кГц
-                    wav_file.writeframes(audio_stream)
-
-            # Загружаем аудио с помощью torchaudio из временного файла
-            waveform, sample_rate = torchaudio.load(temp_filename)
-            
-            # Преобразуем в моно, если необходимо
-            if waveform.shape[0] > 1:
-                waveform = torch.mean(waveform, dim=0, keepdim=True)
+def process_transcription(audio_id, audio_data):
+    try:
+        with transcription_lock:
+            print("Устройство обнаружено: ", device)
+            transcriber = Transcriber(whisper_model_name=model, language='ru', device=device)
 
             # Обновляем статус
             transcription_statuses[audio_id] = 'processing'
-            
-        except Exception as e:
-            traceback_str = traceback.format_exc()
-            print(f"Произошла ошибка при обработке аудио: {traceback_str}")
-            transcription_statuses[audio_id] = 'failed'
-            queue.remove(audio_id)
-            return
-        finally:
-            # Удаляем временный файл
-            if 'temp_filename' in locals():
-                try:
-                    os.remove(temp_filename)
-                except:
-                    pass
 
-        # Выполняем транскрипцию
-        try:
-            result = transcriber.transcribe_with_speaker_detection({
-                "waveform": waveform,
-                "sample_rate": sample_rate,
-                "BytesIO": BytesIO(audio_stream)
-            })
-        except Exception as e:
-            traceback_str = traceback.format_exc()
-            print(f"Произошла ошибка: {traceback_str}")
-            transcription_statuses[audio_id] = 'failed'
-            queue.remove(audio_id)
-            return
+        # Логирование типа и формы данных
+        print(f"Type of audio_data: {type(audio_data)}")
+        print(f"Shape of audio_data: {audio_data.shape}")
+        print(f"Dtype of audio_data: {audio_data.dtype}")
 
-        # Update transcription results and statuses
+        # Убедимся, что данные имеют правильную форму для `numpy.ndarray`
+        if audio_data.ndim == 1:  # Если одномерный массив
+            audio_data = np.expand_dims(audio_data, axis=0)  # Добавляем ось канала
+        elif audio_data.ndim == 2 and audio_data.shape[0] > 1:  # Если многоканальный
+            audio_data = np.mean(audio_data, axis=0, keepdims=True)  # Преобразуем в моно
+
+        sample_rate = 16000  # Частота дискретизации, используемая для всех данных
+
+        # Выполнение транскрипции
+        result = transcriber.transcribe_with_speaker_detection(
+            audio_data,
+            sample_rate
+        )
+
+        # Обновляем результаты
         transcription_results[audio_id] = result
         transcription_statuses[audio_id] = 'completed'
-        queue.remove(audio_id)
 
-# Route to handle transcription requests
+    except Exception as e:
+        traceback_str = traceback.format_exc()
+        print(f"Ошибка при обработке {audio_id}: {traceback_str}")
+        transcription_statuses[audio_id] = 'failed'
+
+    finally:
+        with transcription_lock:
+            if audio_id in queue:
+                queue.remove(audio_id)
+
+
+
+
+from pydub import AudioSegment
+from pydub.utils import mediainfo
+
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
-    # Extract the audio file and its ID from the request
-    audio = request.files['audio_file']
+    # Извлекаем аудиофайл и его ID из запроса
+    audio = request.files.get('audio_file')
+    if not audio:
+        return jsonify({'error': 'No audio file provided'}), 400
+    
     audio_id = request.form.get('id')
-    audio_stream = audio.read()
+    if not audio_id:
+        return jsonify({'error': 'No audio ID provided'}), 400
+    
+    # Печатаем информацию о файле для дебага
+    print(f"Received audio file: {audio.filename}")
+    print(f"Content type: {audio.content_type}")
 
+
+    try:
+        # Определяем MIME-тип файла
+        audio_format = audio.content_type
+        print(f"Received audio file format: {audio_format}")
+        
+        # Чтение аудиофайла в байты
+        audio_stream = audio.read()
+
+        # Получаем информацию о файле
+        # file_info = mediainfo(io.BytesIO(audio_stream))
+        # print(f"File info: {file_info}")
+
+        if 'mp3' in audio.filename.lower():  # MP3
+            # Преобразуем MP3 в numpy
+            print(f"Got mp3! {audio.filename}, audio format: {audio_format}")
+            audio_segment = AudioSegment.from_file(io.BytesIO(audio_stream))
+            audio_segment = audio_segment.set_frame_rate(16000).set_channels(1)  # Преобразуем в моно 16kHz
+            audio_data = np.array(audio_segment.get_array_of_samples(), dtype=np.int16)
+            audio_data = audio_data.astype(np.float32) / 32768.0
+
+        elif 'audio/wav' in audio_format:  # WAV
+            # Преобразуем WAV в numpy
+            audio_segment = AudioSegment.from_file(io.BytesIO(audio_stream), format="wav")
+            audio_segment = audio_segment.set_frame_rate(16000).set_channels(1)  # Преобразуем в моно 16kHz
+            audio_data = np.array(audio_segment.get_array_of_samples(), dtype=np.int16)
+
+        elif 'audio/flac' in audio_format:  # FLAC
+            # Преобразуем FLAC в numpy
+            audio_segment = AudioSegment.from_file(io.BytesIO(audio_stream), format="flac")
+            audio_segment = audio_segment.set_frame_rate(16000).set_channels(1)  # Преобразуем в моно 16kHz
+            audio_data = np.array(audio_segment.get_array_of_samples(), dtype=np.int16)
+
+        else:  # Другие форматы, например OGG
+            # Используем librosa для универсальной загрузки
+            audio_data, sr = librosa.load(io.BytesIO(audio_stream), sr=16000, mono=True)  # Преобразуем в моно и 16kHz
+            audio_data = (audio_data * 32767).astype(np.int16)  # Преобразуем в формат int16
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to process audio file: {str(e)}'}), 500
+    
+
+
+    
+    min_value = np.min(audio_data)
+    max_value = np.max(audio_data)
+    print(f"Диапазон значений аудио данных: от {min_value} до {max_value}")
+    # audio_data она будет размерностями 
+
+    # Добавляем ID аудио в очередь и устанавливаем его статус
     queue.append(audio_id)
     transcription_statuses[audio_id] = 'in_queue'
 
-    # Start a new thread to process the transcription asynchronously
-    threading.Thread(target=process_transcription, args=(audio_id, audio_stream)).start()
+    # Запускаем новый поток для асинхронной обработки транскрипции
+    threading.Thread(target=process_transcription, args=(audio_id, audio_data)).start()
 
-    # Return the initial status of the transcription request
+    # Возвращаем статус запроса
     return jsonify({'status': 'in_queue', 'id': audio_id})
 
 # Route to fetch the transcription result by ID

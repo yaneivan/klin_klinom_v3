@@ -1,0 +1,1 @@
+docker run --gpus all --rm -v C:\Users\admin\Desktop\klin_klinom_v3\models:/app/models -p 4200:4200 -it klin_klinom_v3 pytest
