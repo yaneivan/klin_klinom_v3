@@ -6,6 +6,57 @@ from pyannote.audio import Pipeline
 from pyannote.core import Segment
 import traceback
 import os
+import numpy as np
+
+import soundfile as sf
+import io
+
+from pydub import AudioSegment
+
+
+
+def numpy_to_wav_bytes(numpy_audio_data, sample_rate):
+    print(f"Original dtype of audio data: {numpy_audio_data.dtype}")
+    print(f"Original shape of audio data: {numpy_audio_data.shape}")
+        
+    # if numpy_audio_data.ndim == 2 and numpy_audio_data.shape[0] == 1:
+    numpy_audio_data = numpy_audio_data[0]  # Убираем лишний измерение
+
+
+    print(f"Processed dtype of audio data: {numpy_audio_data.dtype}")
+    print(f"Processed shape of audio data: {numpy_audio_data.shape}")
+
+    # Create a BytesIO buffer to store the WAV data
+    buf = io.BytesIO()
+    try:
+        # Write the audio data to the buffer in WAV format
+        print("Writing audio data to WAV format in the buffer.")
+        sf.write(buf, numpy_audio_data, sample_rate, format='WAV')
+        buf.seek(0)  # Reset the buffer's position to the beginning
+        print("Audio data successfully written to WAV format in the buffer.")
+        return buf
+    except Exception as e:
+        print(f"Error writing audio to WAV: {e}")
+        raise
+
+
+def mp3_to_numpy(mp3_data):
+    # Конвертируем MP3 в аудиофайл в памяти
+    audio = AudioSegment.from_mp3(io.BytesIO(mp3_data))
+    
+    # Преобразуем в моно (если стерео)
+    audio = audio.set_channels(1)
+    
+    # Преобразуем в нужную частоту дискретизации (например, 16kHz)
+    audio = audio.set_frame_rate(16000)
+    
+    # Преобразуем в numpy массив
+    audio_samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+    
+    # Нормализуем данные в диапазоне [-1, 1] для float32
+    audio_samples = audio_samples / 32768.0  # для int16 -> float32
+    
+    return audio_samples
 
 class Transcriber:
     def __init__(self, whisper_model_name = "tiny", language='ru', device = torch.device("cpu") ) -> None:
@@ -45,46 +96,60 @@ class Transcriber:
         else:
             return speaker
         
-    def transcribe_with_speaker_detection(self, data_to_transcribe):
+    def transcribe_with_speaker_detection(self, numpy_audio_data, sample_rate=16000):
+        if not isinstance(numpy_audio_data, np.ndarray):
+            raise TypeError(f"Expected np.ndarray, got {type(numpy_audio_data)}")
+        
+        # Преобразование данных для модели сегментации говорящих (Pyannote)
+        waveform = torch.from_numpy(numpy_audio_data).float()
+        if waveform.ndimension() == 1:
+            waveform = waveform.unsqueeze(0)  # Добавляем измерение канала
+        elif waveform.ndimension() == 2 and waveform.shape[0] > 1:
+            waveform = torch.mean(waveform, dim=0, keepdim=True)  # Преобразуем в моно
+        
+        # Перенос на устройство
         self.speaker_segmentation_pipeline.to(self.device)
         
-        # run the pipeline on an audio file
-        diarization = self.speaker_segmentation_pipeline(data_to_transcribe, num_speakers=2)
-
-        self.speaker_segmentation_pipeline.to(torch.device('cpu'))
-        # transcription = self.speech_recognition_pipe(data_to_transcribe, chunk_length_s=30,
-            # batch_size=1)['chunks']
-
-        print("Data to transcribe:", data_to_transcribe["waveform"])
-        print("\n\n\n", data_to_transcribe)
-
-        transcription = []
-        segments, info = self.model.transcribe(data_to_transcribe["BytesIO"], beam_size=5, language='ru', condition_on_previous_text=False, 
-                                               vad_filter=True )
-        for segment in segments:
-            transcription.append({"text":segment.text, "timestamp":[segment.start, segment.end]})
+        # Диаризация
+        diarization = self.speaker_segmentation_pipeline({"waveform": waveform, "sample_rate": sample_rate}, num_speakers=2)
+        self.speaker_segmentation_pipeline.to(torch.device('cpu'))  # Освобождаем устройство
+        print('0'*60)
+        print("Diarization ran successfully")
+        print('0'*60)
         
-        # print("Just from the oven:", transcription[0])
-
-        # self.model.to(torch.device('cpu'))
-
+        # Преобразование данных для Faster Whisper
+        audio_bytes = numpy_to_wav_bytes(numpy_audio_data, sample_rate)
+        
+        # Транскрипция
+        segments, info = self.model.transcribe(
+            audio_bytes,
+            beam_size=5,
+            language='ru',
+            condition_on_previous_text=False,
+            vad_filter=True
+        )
+        
+        # Форматирование результата
+        transcription = []
+        for segment in segments:
+            transcription.append({"text": segment.text, "timestamp": [segment.start, segment.end]})
+        
+        # Добавление информации о говорящих
         for i in range(len(transcription)):
-            speaker = self.get_speaker(diarization, transcription[i]['timestamp'][0],  transcription[i]['timestamp'][1])
-
+            speaker = self.get_speaker(diarization, transcription[i]['timestamp'][0], transcription[i]['timestamp'][1])
             try:
                 if speaker == 'No_speaker':
-                    if i == 0:
-                        speaker = 'SPEAKER_00'
-                    else: 
-                        speaker = transcription[i-1]['speaker']
+                    speaker = transcription[i - 1]['speaker'] if i > 0 else 'SPEAKER_00'
                 transcription[i].update({"speaker": speaker})
             except Exception as e:
                 traceback_str = traceback.format_exc()
-                print(f"Af error occurred: {traceback_str}")
+                print(f"An error occurred: {traceback_str}")
                 print("i:", i)
                 print("Transcription:", transcription)
-
+        
         return transcription
+
+
 
         # print("Before saving:", transcription[0])
 

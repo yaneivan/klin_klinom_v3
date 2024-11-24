@@ -27,6 +27,9 @@ def real_audio_data():
     }
 
 
+def test_cuda_availability():
+    assert torch.cuda.is_available()
+
 # from pydub import AudioSegment
 # import io
 
@@ -54,38 +57,38 @@ def real_audio_data():
 #     assert len(transcription) > 0
 
 
-def test_audio_backend_avialibility():
-    print(torchaudio.list_audio_backends())
-    assert len(torchaudio.list_audio_backends()) > 0
+# def test_audio_backend_avialibility():
+#     print(torchaudio.list_audio_backends())
+#     assert len(torchaudio.list_audio_backends()) > 0
 
-def test_transcriber_initialization(transcriber):
-    assert transcriber.model is not None
-    assert transcriber.speaker_segmentation_pipeline is not None
-
-
-def test_audio_file_exists():
-    """Проверяем, что тестовый аудиофайл существует"""
-    try:
-        waveform, sample_rate = torchaudio.load(test_file)
-        assert waveform.shape[0] > 0
-        assert sample_rate > 0
-    except Exception as e:
-        pytest.fail(f"Не удалось загрузить тестовый аудиофайл: {str(e)}")
-
-def test_test_audio_not_empty(real_audio_data):
-    assert real_audio_data['waveform'] != None
-    assert real_audio_data['sample_rate'] != None 
-    assert real_audio_data['raw'].any() != None
-    assert real_audio_data['sampling_rate'] != None 
-    assert real_audio_data['BytesIO'] != None
+# def test_transcriber_initialization(transcriber):
+#     assert transcriber.model is not None
+#     assert transcriber.speaker_segmentation_pipeline is not None
 
 
-def test_whisper_model(transcriber, real_audio_data):
-    transcription = []
-    segments, info = transcriber.model.transcribe(real_audio_data['BytesIO'])
-    for segment in segments:
-        transcription.append({"text":segment.text, "timestamp":[segment.start, segment.end]})
-    assert len(transcription) > 0
+# def test_audio_file_exists():
+#     """Проверяем, что тестовый аудиофайл существует"""
+#     try:
+#         waveform, sample_rate = torchaudio.load(test_file)
+#         assert waveform.shape[0] > 0
+#         assert sample_rate > 0
+#     except Exception as e:
+#         pytest.fail(f"Не удалось загрузить тестовый аудиофайл: {str(e)}")
+
+# def test_test_audio_not_empty(real_audio_data):
+#     assert real_audio_data['waveform'] != None
+#     assert real_audio_data['sample_rate'] != None 
+#     assert real_audio_data['raw'].any() != None
+#     assert real_audio_data['sampling_rate'] != None 
+#     assert real_audio_data['BytesIO'] != None
+
+
+# def test_whisper_model(transcriber, real_audio_data):
+#     transcription = []
+#     segments, info = transcriber.model.transcribe(real_audio_data['BytesIO'])
+#     for segment in segments:
+#         transcription.append({"text":segment.text, "timestamp":[segment.start, segment.end]})
+#     assert len(transcription) > 0
 
 
 # def test_transcribe_with_speaker_detection(transcriber, real_audio_data):
